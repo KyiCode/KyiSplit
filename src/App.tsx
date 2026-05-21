@@ -18,19 +18,35 @@ interface GroupDetailsProp {
     groupMembers: Member[]
 }
 
+const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
+const member2: Member = { memberName: "claire", memberEmail: "claire@email.com" }
+const member3: Member = { memberName: "sheldon", memberEmail: "sheldon@email.com" }
+const member4: Member = { memberName: "leonard", memberEmail: "leonard@email.com" }
+
+const initialGroups: GroupDetailsProp[] = [
+  { groupName: "group1", groupMembers: [member1, member2] },
+  { groupName: "group2", groupMembers: [member3, member4] },
+]
+
 function App() {
   const [count, setCount] = useState(0)
+  const [groups, setGroups] = useState<GroupDetailsProp[]>(initialGroups)
 
-  const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
-  const member2: Member = { memberName: "claire", memberEmail: "tom@email.com" }
-  const member3: Member = { memberName: "sheldon", memberEmail: "tom@email.com" }
+  function handleAddGroup(groupName: string) {
+    const newGroup: GroupDetailsProp = {
+        groupName: groupName,
+        groupMembers: []
+    }
+    setGroups([...groups, newGroup])  // add new group to groups array
+    alert(`Add Group: ${groupName}`)
+  }
 
   return (
     <>
-      <Group groupName = "lol" groupMembers={[member1, member2, member3]} ></Group>
-      <Group groupName = "lol" groupMembers={[member1, member2, member3]} ></Group> 
-      <Group groupName = "lol" groupMembers={[member1, member2, member3]} ></Group>
-      <AddGroup/>
+      {groups.map(group => {
+        return <Group groupName={group.groupName} groupMembers={group.groupMembers} />
+      })} 
+      <AddGroup onAddGroup={handleAddGroup}/>
     </>
     
   )
