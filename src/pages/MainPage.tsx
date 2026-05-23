@@ -1,6 +1,7 @@
 import { useState } from "react"
 import AddGroup from "../components/AddGroup"
 import GroupList from "../components/GroupList"
+import { useNavigate } from "react-router-dom"
 
 interface Member {
     memberName: string
@@ -25,7 +26,7 @@ const initialGroups: GroupDetailsProp[] = [
 
 function MainPage() {
     const [groups, setGroups] = useState<GroupDetailsProp[]>(initialGroups)
-
+    const navigate = useNavigate()
     function handleAddGroup(groupName: string) {
         const newGroup: GroupDetailsProp = {
             groupName: groupName,
@@ -36,14 +37,18 @@ function MainPage() {
     }
 
     function onEnterGroup(groupDetails: GroupDetailsProp) {
+
         alert(`Entering Group: ${groupDetails.groupName} with  members: ${groupDetails.groupMembers.map(member => member.memberName).join(", ")}`)
+        navigate("/group")
     }
 
     return (
         <>
             <h1>Main Page</h1>
+            
             <GroupList groups={groups} onEnterGroup={onEnterGroup} />
             <AddGroup onAddGroup={handleAddGroup} />
+
         </>
 
     )
