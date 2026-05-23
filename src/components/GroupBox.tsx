@@ -14,16 +14,16 @@ interface GroupDetailsProp {
 
 
 
-function Group(group: GroupDetailsProp) {
+function GroupBox({groupName, groupMembers, onEnterGroup}: GroupDetailsProp & { onEnterGroup: (groupDetails: GroupDetailsProp) => void }) {
     function handleEnterGroup() {
-        alert(`entering Group ${group.groupName}`)
+        onEnterGroup({ groupName, groupMembers })
     }
 
     return (
         <div>
-            <div>{group.groupName}</div>
+            <div>{groupName}</div>
             <div>
-                {group.groupMembers.map(
+                {groupMembers.map(
                     member => {return <div>{member.memberName}</div>
                 })}
             </div>
@@ -34,4 +34,4 @@ function Group(group: GroupDetailsProp) {
 }
 
 
-export default Group 
+export default GroupBox
