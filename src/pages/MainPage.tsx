@@ -2,6 +2,7 @@ import { useState } from "react"
 import AddGroup from "../components/AddGroup"
 import GroupList from "../components/GroupList"
 import { useNavigate } from "react-router-dom"
+import AccountButton from "../components/AccountButton"
 
 interface Member {
     memberName: string
@@ -44,8 +45,15 @@ function MainPage() {
 
     return (
         <>
+            <div>
+                <h2>Nav
+                    <AccountButton />
+                </h2>
+                
+            </div>
+
             <h1>Main Page</h1>
-            
+
             <GroupList groups={groups} onEnterGroup={onEnterGroup} />
             <AddGroup onAddGroup={handleAddGroup} />
 
