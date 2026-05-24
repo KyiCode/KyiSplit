@@ -4,41 +4,32 @@ import GroupList from "../components/GroupList"
 import { useNavigate } from "react-router-dom"
 import AccountButton from "../components/AccountButton"
 
-interface Member {
-    memberName: string
-    memberEmail: string
-
-}
-
-interface GroupDetailsProp {
-    groupName: string
-    groupMembers: Member[]
-}
+import type { Member, Group } from '../interfaces/interface'
 
 const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
 const member2: Member = { memberName: "claire", memberEmail: "claire@email.com" }
 const member3: Member = { memberName: "sheldon", memberEmail: "sheldon@email.com" }
 const member4: Member = { memberName: "leonard", memberEmail: "leonard@email.com" }
 
-const initialGroups: GroupDetailsProp[] = [
-    { groupName: "group1", groupMembers: [member1, member2] },
-    { groupName: "group2", groupMembers: [member3, member4] },
+const initialGroups: Group[] = [
+    { groupName: "group1", groupMembers: [member1, member2], expenses: [] },
+    { groupName: "group2", groupMembers: [member3, member4], expenses: [] },
 ]
 
 function MainPage() {
-    const [groups, setGroups] = useState<GroupDetailsProp[]>(initialGroups)
+    const [groups, setGroups] = useState<Group[]>(initialGroups)
     const navigate = useNavigate()
     function handleAddGroup(groupName: string) {
-        const newGroup: GroupDetailsProp = {
+        const newGroup: Group = {
             groupName: groupName,
-            groupMembers: []
+            groupMembers: [],
+            expenses: []  // placeholder, will implement expenses later
         }
         setGroups([...groups, newGroup])  // add new group to groups array
         alert(`Add Group: ${groupName}`)
     }
 
-    function onEnterGroup(groupDetails: GroupDetailsProp) {
-
+    function onEnterGroup(groupDetails: Group) {
         alert(`Entering Group: ${groupDetails.groupName} with  members: ${groupDetails.groupMembers.map(member => member.memberName).join(", ")}`)
         navigate("/group")
     }
@@ -49,7 +40,7 @@ function MainPage() {
                 <h2>Nav
                     <AccountButton />
                 </h2>
-                
+
             </div>
 
             <h1>Main Page</h1>

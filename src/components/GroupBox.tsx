@@ -1,22 +1,11 @@
 import { useState } from "react";
-
-interface Member {
-    memberName: string
-    memberEmail: string
-
-}
-
-interface GroupDetailsProp {
-    groupName: string
-    groupMembers: Member[]
-    
-}
+import type { Member, Group } from '../interfaces/interface'
 
 
 
-function GroupBox({groupName, groupMembers, onEnterGroup}: GroupDetailsProp & { onEnterGroup: (groupDetails: GroupDetailsProp) => void }) {
+function GroupBox({ groupName, groupMembers, onEnterGroup }: Group & { onEnterGroup: (groupDetails: Group) => void }) {
     function handleEnterGroup() {
-        onEnterGroup({ groupName, groupMembers })
+        onEnterGroup({ groupName, groupMembers, expenses: [] })
     }
 
     return (
@@ -24,10 +13,11 @@ function GroupBox({groupName, groupMembers, onEnterGroup}: GroupDetailsProp & { 
             <div>{groupName}</div>
             <div>
                 {groupMembers.map(
-                    member => {return <div>{member.memberName}</div>
-                })}
+                    member => {
+                        return <div>{member.memberName}</div>
+                    })}
             </div>
-            <button onClick={()=>handleEnterGroup()}>Enter</button>
+            <button onClick={() => handleEnterGroup()}>Enter</button>
 
         </div>
     )

@@ -1,22 +1,13 @@
 import GroupBox from "./GroupBox"
+import type { Member, Group } from '../interfaces/interface'
 
-interface Member {
-    memberName: string
-    memberEmail: string
 
-}
-
-interface GroupDetailsProp {
-    groupName: string
-    groupMembers: Member[]
-}
-
-function GroupList({ groups, onEnterGroup }: { groups: GroupDetailsProp[], onEnterGroup: (groupDetails: GroupDetailsProp) => void }) {
+function GroupList({ groups, onEnterGroup }: { groups: Group[], onEnterGroup: (groupDetails: Group) => void }) {
     return (
         <div>
             {groups.map(group => {
-                return <GroupBox groupName={group.groupName} groupMembers={group.groupMembers} onEnterGroup={onEnterGroup} />
-            })} 
+                return <GroupBox groupName={group.groupName} groupMembers={group.groupMembers} expenses={group.expenses} onEnterGroup={onEnterGroup} />
+            })}
         </div>
     )
 }
