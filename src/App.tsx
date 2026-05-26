@@ -4,6 +4,7 @@ import MainPage from './pages/MainPage'
 import LogInPage from './pages/LogInPage'
 import SignUpPage from './pages/SignUpPage'
 import GroupPage from './pages/GroupPage'
+import AddExpensePage from './pages/AddExpensePage'
 
 function App() {
 
@@ -13,6 +14,7 @@ function App() {
       <Route path="/login" element={<LogInPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/group" element={<GroupPage />} />
+      <Route path="/addexpense" element={< AddExpensePage />}/>
     </Routes>
 
   )

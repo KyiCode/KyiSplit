@@ -11,6 +11,7 @@ export interface Group {
 
 export interface Expense {
     expenseName: string
+    expenseTotal: number
     paidBy: Payment[]
     splits: Split[]
 }
@@ -27,4 +28,7 @@ export interface Split {
 
 
 
-
+export interface ExpenseBoxProp {
+    expense: Expense
+    handleDelete: (expense: Expense) => void
+}

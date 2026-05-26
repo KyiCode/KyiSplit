@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import type { Group, Expense, Member, Payment, Split } from '../interfaces/interface'
+import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp } from '../interfaces/interface'
 import ExpenseBox from "../components/ExpenseBox"
 
 const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
@@ -13,6 +13,7 @@ const member4: Member = { memberName: "leonard", memberEmail: "leonard@email.com
 const sampleExpense1: Expense = {
 
     expenseName: "Dinner",
+    expenseTotal: 40,
     paidBy: [
         { payer: "tom", amount: 40 },
     ],
@@ -24,6 +25,7 @@ const sampleExpense1: Expense = {
 
 const sampleExpense2: Expense = {
     expenseName: "Movie",
+    expenseTotal: 30,
     paidBy: [
         { payer: "claire", amount: 30 },
     ],
@@ -41,12 +43,32 @@ const group: Group = {
 
 function GroupPage() {
     const [expenses, setExpenses] = useState<Expense[]>(group.expenses)
+    const [expenseName, setExpenseName] = useState("")
+    const [expenseTotal, setExpenseTotal] = useState("")
 
     const navigate = useNavigate()
 
     function handleExitGroup() {
         alert("Exiting group")
         navigate("/")
+    }
+
+    function handleAddExpense() {
+        const newExpense: Expense = {
+            expenseName: expenseName,
+            expenseTotal: expenseTotal == "" ? -1 : Number(expenseTotal),
+            paidBy: [],
+            splits: []
+        }
+
+        if (newExpense.expenseName == "" || newExpense.expenseTotal < 0) return
+        setExpenseName("")
+        setExpenseTotal("")
+        setExpenses([...expenses, newExpense])
+    }
+
+    function handleDeleteExpense(expense: Expense) {
+        setExpenses(expenses.filter(e => e.expenseName != expense.expenseName))
     }
 
     return (
@@ -57,15 +79,12 @@ function GroupPage() {
             {group.groupMembers.map(member => (<div> {member.memberName} </div>))}
 
             {expenses.map(expense => (
-                <ExpenseBox key={expense.expenseName} expense={expense} />
+                <div>
+
+                    <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} />
+                </div>
             ))}
-
-
-            <div>
-                <input type="text" placeholder="Enter expense name" />
-                <input type="number" placeholder="Enter amount" />
-                <button> Add Expense</button>
-            </div>
+            <button onClick={() => navigate("/addexpense")}> Add Expense</button>
         </div>
     )
 }
