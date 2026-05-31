@@ -16,8 +16,8 @@ const initialGroups: Group[] = [
     { groupName: "group2", groupMembers: [member3, member4], expenses: [] },
 ]
 
-function MainPage() {
-    const [groups, setGroups] = useState<Group[]>(initialGroups)
+function MainPage({ currGroups, addGroup }: { currGroups: Group[], addGroup: (group: Group) => void }) {
+    // const [groups, setGroups] = useState<Group[]>(currGroups)
     const navigate = useNavigate()
     function handleAddGroup(groupName: string) {
         const newGroup: Group = {
@@ -25,8 +25,9 @@ function MainPage() {
             groupMembers: [],
             expenses: []  // placeholder, will implement expenses later
         }
-        setGroups([...groups, newGroup])  // add new group to groups array
+        // setGroups([...groups, newGroup])  // add new group to groups array
         alert(`Add Group: ${groupName}`)
+        addGroup(newGroup)
     }
 
     function onEnterGroup(groupDetails: Group) {
@@ -45,7 +46,7 @@ function MainPage() {
 
             <h1>Main Page</h1>
 
-            <GroupList groups={groups} onEnterGroup={onEnterGroup} />
+            <GroupList groups={currGroups} onEnterGroup={onEnterGroup} />
             <AddGroup onAddGroup={handleAddGroup} />
 
         </>

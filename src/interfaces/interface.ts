@@ -16,14 +16,16 @@ export interface Expense {
     splits: Split[]
 }
 
-export interface Payment {
-    payer: string
+export interface ExpenseMemberAmount {
+    memberName: string
     amount: number
 }
 
-export interface Split {
-    member: string
-    amount: number
+export interface Payment extends ExpenseMemberAmount {
+ 
+}
+
+export interface Split extends ExpenseMemberAmount {
 }
 
 

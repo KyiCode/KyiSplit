@@ -6,15 +6,31 @@ import SignUpPage from './pages/SignUpPage'
 import GroupPage from './pages/GroupPage'
 import AddExpensePage from './pages/AddExpensePage'
 
+import { type Group, type Expense, type Member, type Payment, type Split, type ExpenseBoxProp, type ExpenseMemberAmount } from './interfaces/interface'
+
 function App() {
+  const [groups, setGroups] = useState<Group[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+
+  function handleAddGroup(newGroup: Group) {
+    setGroups(
+      [...groups, newGroup]
+    )
+  }
+
+  function handleAddExpense(newExpense: Expense) {
+    setExpenses(
+      [...expenses, newExpense]
+    )
+  }
 
   return (
     <Routes>
-      <Route path="/" element={<MainPage />} />
+      <Route path="/" element={<MainPage currGroups={groups} addGroup={handleAddGroup}/>} />
       <Route path="/login" element={<LogInPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/group" element={<GroupPage />} />
-      <Route path="/addexpense" element={< AddExpensePage />}/>
+      <Route path="/group" element={<GroupPage currExpenses={expenses} />} />
+      <Route path="/addexpense" element={< AddExpensePage addExpense={handleAddExpense} />} />
     </Routes>
 
   )

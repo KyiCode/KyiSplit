@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import ExpenseBox from "../components/ExpenseBox"
 import DropDownForm from "../components/DropDownForm"
 
-import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp } from '../interfaces/interface'
+import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp, ExpenseMemberAmount } from '../interfaces/interface'
 
 const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
 const member2: Member = { memberName: "claire", memberEmail: "claire@email.com" }
@@ -18,15 +18,15 @@ const group: Group = {
     expenses: []
 }
 
-function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
+function AddExpensePage({ addExpense }: { addExpense: (expense: Expense) => void }) {  // BackEnd have to somehow pass groupdetails
     const [hasExpense, setHasExpense] = useState(false)
     const [expense, setExpense] = useState<Expense | null>(null)
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
     const navigate = useNavigate()
 
-    const [isSettingPayer, setIsSettingPayer] = useState(false)
-
+    const [isAssigningPayer, setIsAssigningPayer] = useState(false)
+    const [isAssigningSplit, setIsAssigningSplit] = useState(false)
 
     function handleDeleteExpense() {
         setHasExpense(false)
@@ -35,7 +35,7 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         setExpenseTotal("")
     }
 
-    function handleAddExpense() {
+    function handleAddExpenseDetails() {
         if (expenseName == "" || expenseTotal == "") {
             return
         }
@@ -49,8 +49,33 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         setExpense(newExpense)
     }
 
-    function handleAssignPayer() {
+    function handleAddExpense() {
+        if (expense) {
+            addExpense(expense)
+            navigate("/group")
+        }
+    }
 
+    function handleAssignPayer(expenseMemberAmount: ExpenseMemberAmount[]) {
+        const newExpense: Expense = {
+            expenseName: expenseName,
+            expenseTotal: Number(expenseTotal),
+            splits: expense == null ? [] : expense.splits,
+            paidBy: expenseMemberAmount
+        }
+        setExpense(newExpense)
+        setIsAssigningPayer(false)
+    }
+
+    function handleAssignSplit(expenseMemberAmount: ExpenseMemberAmount[]) {
+        const newExpense: Expense = {
+            expenseName: expenseName,
+            expenseTotal: Number(expenseTotal),
+            splits: expenseMemberAmount,
+            paidBy: expense == null ? [] : expense.paidBy
+        }
+        setExpense(newExpense)
+        setIsAssigningSplit(false)
     }
 
     return (
@@ -63,19 +88,30 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
             <h1>
                 <input type="text" value={expenseName} onChange={(e) => setExpenseName(e.target.value)} placeholder="Enter description" />
                 <input type="number" value={expenseTotal ?? ""} onChange={(e) => setExpenseTotal(e.target.value)} placeholder="Enter amount" />
-                <button onClick={() => handleAddExpense()}>Submit</button>
+                <button onClick={() => handleAddExpenseDetails()}>Submit</button>
             </h1>
 
             {hasExpense &&
                 <>
-                    <button onClick={() => setIsSettingPayer(true)}>Paid BY</button>
-                    {isSettingPayer &&
-                        <>
-                            <DropDownForm group={group} assignPayer={handleAssignPayer} />
-                            
-                        </>
+                    <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
+                    {isAssigningPayer &&
+                        <DropDownForm group={group} assignPayer={handleAssignPayer} />
                     }
                 </>
+            }
+
+            {hasExpense &&
+                <>
+                    <button onClick={() => setIsAssigningSplit(!isAssigningSplit)}>Assign split</button>
+                    {isAssigningSplit &&
+                        <DropDownForm group={group} assignPayer={handleAssignSplit} />
+                    }
+                </>
+            }
+
+            {
+                hasExpense &&
+                <button onClick={() => handleAddExpense()}>Add Expense</button>
             }
         </>
     )

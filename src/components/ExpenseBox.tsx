@@ -14,10 +14,12 @@ function ExpenseBox({ expense, handleDelete }: ExpenseBoxProp) {
 
     return (
         <div>
-            <h3>{expense.expenseName} <button onClick={() => handleDelete(expense)}>Delete Expense</button> </h3>
+            <h2>{expense.expenseName} <button onClick={() => handleDelete(expense)}>Delete Expense</button> </h2>
             <h3> total (${expense.expenseTotal.toFixed(2)})</h3>
-            <div> Paid By: {expense.paidBy.map(payment => `${payment.payer} (${payment.amount})`).join(", ")} </div>
-            <div> Splits: {expense.splits.map(split => `${split.member} (${split.amount})`).join(", ")} </div>
+            <div> Paid By: {expense.paidBy.map(payment => `${payment.memberName} ($${payment.amount})`).join(", ")} </div>
+            <div> Splits: {expense.splits.map(split => `${split.memberName} ($${split.amount})`).join(", ")} </div>
+            <h2> . </h2>
+            <h2> . </h2>
 
         </div>
     )

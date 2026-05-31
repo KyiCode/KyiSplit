@@ -15,11 +15,11 @@ const sampleExpense1: Expense = {
     expenseName: "Dinner",
     expenseTotal: 40,
     paidBy: [
-        { payer: "tom", amount: 40 },
+        { memberName: "tom", amount: 40 },
     ],
     splits: [
-        { member: "tom", amount: 20 },
-        { member: "claire", amount: 20 },
+        { memberName: "tom", amount: 20 },
+        { memberName: "claire", amount: 20 },
     ]
 }
 
@@ -27,11 +27,11 @@ const sampleExpense2: Expense = {
     expenseName: "Movie",
     expenseTotal: 30,
     paidBy: [
-        { payer: "claire", amount: 30 },
+        { memberName: "claire", amount: 30 },
     ],
     splits: [
-        { member: "tom", amount: 15 },
-        { member: "claire", amount: 15 },
+        { memberName: "tom", amount: 15 },
+        { memberName: "claire", amount: 15 },
     ]
 }
 
@@ -41,8 +41,8 @@ const group: Group = {
     expenses: [sampleExpense1, sampleExpense2]
 }
 
-function GroupPage() {
-    const [expenses, setExpenses] = useState<Expense[]>(group.expenses)
+function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
+    const [expenses, setExpenses] = useState<Expense[]>(currExpenses)
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
 
