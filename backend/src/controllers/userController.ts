@@ -1,37 +1,47 @@
 import express from 'express'
 import database from '../db'
-import { PassThrough } from 'node:stream'
 import bcrypt from 'bcryptjs'
-import { error } from 'node:console'
 import dotenv from 'dotenv'
 
+import { Request, Response } from 'express'
+
+import generateToken from "../utils/tokenGenerator"
+
 dotenv.config()
+
+
 
 const router = express.Router()
 
 const bcryptSalt = Number(process.env.BCRYPT_SALT)
 
 
-const signup = router.post('/signup', async (req, res) => {
-
+export const signup = async (req: Request, res: Response) => {
+    console.log("Signing up")
     try {
-        console.log("Signing up")
         const { name, email, password } = req.body
-        const hashedPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(bcryptSalt))
-        await database.query(
 
+        const hasEmail = await database.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        )
+
+        if (hasEmail.rows.length > 0) return res.json({ message: 'Email already has an account' })
+
+        const hashedPassword = await bcrypt.hash(password, bcrypt.genSaltSync(bcryptSalt))
+        await database.query(
             'INSERT INTO users (name, email, password) VALUES ($1, $2, $3)',
             [name, email, hashedPassword]
         )
-        res.json({ message: 'user created' })
+        return res.json({ message: 'User created' })
     } catch (error) {
-        res.status(500).send((error as Error).message)
+        return res.status(500).json({ error: 'Server error' })
     }
-})
+}
 
-const login = router.get('/login', async (req, res) => {
+export const login = async (req: Request, res: Response) => {
+    console.log("loggin in")
     try {
-        console.log("loggin in")
         const { email, password } = req.body
 
         const user = await database.query(
@@ -39,16 +49,23 @@ const login = router.get('/login', async (req, res) => {
             [email]
         )
 
-        if (!user) return res.json({ message: "Email not tagged to an account" })
+        if (user.rows.length == 0) return res.json({ message: "Email not tagged to an account" })
 
         const authPassword = await bcrypt.compare(password, user.rows[0].password)
 
         if (!authPassword) return res.json({ message: "Wrong password" })
+        const token = generateToken(user.rows[0].id, res)
 
-        return res.json(user.rows)
+        const userDetails = user.rows[0]
+
+        return res.json({
+            id: userDetails.id,
+            name: userDetails.name,
+            email: userDetails.email,
+            token: token // not really necessary
+        })
+
     } catch (error) {
-        res.status(500).send((error as Error).message)
+        res.status(500).json({ error: 'Server error' })
     }
-})
-
-export default router
+}

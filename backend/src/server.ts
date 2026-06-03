@@ -3,7 +3,7 @@ import cors from 'cors'
 import database from './db';
 import dotenv from 'dotenv'
 
-import signUpRoute from './controllers/userController';
+import userRoutes from './routes/userRoutes'
 
 dotenv.config()
 
@@ -13,7 +13,7 @@ app.use(cors())
 app.use(express.json())
 
 
-app.use('/api/users', signUpRoute)
+app.use('/api/users', userRoutes)
 
 
 const server = app.listen(port, () => console.log("server connected"))
