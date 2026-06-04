@@ -4,6 +4,7 @@ import database from './db';
 import dotenv from 'dotenv'
 
 import userRoutes from './routes/userRoutes'
+import groupRoutes from './routes/groupRoutes'
 
 dotenv.config()
 
@@ -14,6 +15,7 @@ app.use(express.json())
 
 
 app.use('/api/users', userRoutes)
+app.use('/api/groups', groupRoutes)
 
 
 const server = app.listen(port, () => console.log("server connected"))
