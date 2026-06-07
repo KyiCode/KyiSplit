@@ -68,7 +68,7 @@ export const addMember = async (req: Request, res: Response) => {
 export const getGroupList = async (req: Request, res: Response) => {
     console.log("getting group list")
     try {
-        const user = req.body.user
+        const user = req.user.userId
 
         const groupResults = await database.query(
             'SELECT group_id FROM group_members WHERE user_id = $1',

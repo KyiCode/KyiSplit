@@ -4,11 +4,9 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-
-
 const generateToken = (userId: string, res: Response) => {
     const tokenDuration = 10
-    const payload = { id: userId };
+    const payload = { userId: userId };
 
     const secret = process.env.JWT_KEY;
 

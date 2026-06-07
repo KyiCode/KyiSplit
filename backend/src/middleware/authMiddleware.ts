@@ -22,27 +22,35 @@ const authMiddleware = async (req: Request, res: Response, next: NextFunction) =
     }
 
     // if not token not authorised
-    if (!token) return res.json({message: "not authorised"})
-
+    if (!token) {
+        res.status(401).json({ message: "not authorised" })
+        return
+    }
     // verify token with kwt.verif
-    // let decoded
-    // try {
-    //     decoded = jwt.verify(token, process.env.JWT_KEY)
-    // } catch (error) {
-    //     return res.status(401).json({error: "Invalid token"})
-    // }
 
+    interface tokenPayLoad {
+        userId: string
+    }
 
-    // CHECK TYPE OF DECODED.ID
-    // const hasUser = await database.query(
-    //     'SELECT * FROM users WHERE id = $1',
-    //     [decoded.id]  // need check type
-    // )
- 
-    // if (hasUser.rows.length == 0) return res.json({message: 'User not found'}) 
+    let decoded
+    try {
+        decoded = jwt.verify(token, process.env.JWT_KEY!) as tokenPayLoad
+    } catch (error) {
+        res.status(401).json({ error: "Invalid token" })
+        return
+    }
 
-    // attach user to req, passes req to next
-    
+    const hasUser = await database.query(
+        'SELECT * FROM users WHERE id = $1',
+        [decoded.userId]
+    )
+
+    if (hasUser.rows.length == 0) {
+        res.status(401).json({ error: 'User not found' })
+        return
+    }
+
+    req.user = { userId: decoded.userId }
     next()
 }
 
