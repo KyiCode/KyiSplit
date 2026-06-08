@@ -2,7 +2,6 @@ import express from 'express'
 
 import { Request, Response } from 'express'
 import database from '../db'
-import { data } from 'react-router-dom'
 
 // False if : user dont exist, user not in group, group dont exist
 async function isUserAuthorised(user: string, groupId: string) {
@@ -183,14 +182,12 @@ export const getExpenseList = async (req: Request, res: Response) => {
     try {
         if (!groupId) return res.status(400).json({ error: "request error" })
         if (!(await hasUser(user))) return res.status(400).json({ error: "no user" })
-
         if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: "user not authorised or group do not exist" })
 
         const expenseListResult = await database.query(
             'SELECT * FROM expenses WHERE group_id = $1',
             [groupId]
         )
-
         const expenseId = expenseListResult.rows.map((expenses) => expenses.id)
 
         interface paymentData {
@@ -198,30 +195,23 @@ export const getExpenseList = async (req: Request, res: Response) => {
             user_id: string,
             amount: number
         }
-
         let paymentArr: paymentData[] = []
         let splitArr: paymentData[] = []
-
 
         for (const expense of expenseId) {
             const paymentResult = await database.query('SELECT * FROM payments WHERE expense_id = $1', [expense])
             const splitResult = await database.query('SELECT * FROM splits WHERE expense_id = $1', [expense])
             paymentArr.push(...paymentResult.rows)
-            splitArr.push(...splitResult.rows[0])
+            splitArr.push(...splitResult.rows)
         }
 
-        for (const x of paymentArr) {
-            console.log(x)
-        }
-
-        return res.json(paymentArr)
-
-
+        return res.status(200).json({
+            expenseId: expenseId,
+            payments: paymentArr,
+            splits: splitArr
+        })
     } catch (error) {
         console.log(error)
+        return res.status(501).json({ error: 'Server error getting expenses' })
     }
-}
-
-export const enterExpensee = async (req: Request, res: Response) => {
-
 }

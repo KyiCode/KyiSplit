@@ -1,6 +1,6 @@
 import express from 'express'
 
-import { addExpense, addPayer, addSplit, enterExpensee, getExpenseList } from '../controllers/expenseController'
+import { addExpense, addPayer, addSplit, getExpenseList } from '../controllers/expenseController'
 
 import authMiddleware from '../middleware/authMiddleware'
 import { getGroupList } from '../controllers/groupController'
@@ -18,7 +18,6 @@ router.post("/addsplit", addSplit)
 
 router.get("/expenselist", getExpenseList)
 
-router.get("/enterexpense", enterExpensee)
 
 export default router
 
