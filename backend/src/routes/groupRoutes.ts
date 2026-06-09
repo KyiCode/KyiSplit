@@ -18,7 +18,8 @@ router.get("/grouplist", getGroupList)
 
 router.get("/entergroup", enterGroup)
 
-router.get("/:grouId/balances", getBalance)
+router.get("/:groupId/getbalance", getBalance)
+router.get("/:groupId/getbalance", getBalance)
 
 export default router
 // router.post('/deletemember', deleteMemeber)

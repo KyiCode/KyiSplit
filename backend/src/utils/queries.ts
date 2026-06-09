@@ -1,0 +1,43 @@
+import database from "../db"
+
+export async function getUsersInGroup(groupId: string) {
+    const usersResult = await database.query(
+        'SELECT user_id FROM group_members WHERE group_id = $1',
+        [groupId]
+    )
+    return usersResult.rows.map((user) => user.user_id)
+}
+
+export async function getGroupIdByExpense(expenseId: String) {
+    const groupIdResult = await database.query(
+        'SELECT group_id FROM expenses WHERE id = $1',
+        [expenseId]
+    )
+    const groupId = groupIdResult.rows[0].group_id
+    return groupId
+}
+
+export async function getExpenseTotal(expenseId: string) {
+    const totalResult = await database.query(
+        'SELECT total FROM expenses WHERE id = $1',
+        [expenseId]
+    )
+    return Number(totalResult.rows[0].total)
+}
+
+export async function getExpenses(groupId: string) {
+    const expenseListResult = await database.query(
+        'SELECT id FROM expenses WHERE group_id = $1',
+        [groupId]
+    )
+    return expenseListResult.rows.map((expenses) => expenses.id)
+}
+
+export async function getSplits(expenses: string[]) {
+    // promise returns array, hence []. promise runs queries concurrently. ANY allows array matching
+    const [paymentResult, splitResult] = await Promise.all([
+        database.query('SELECT * FROM payments WHERE expense_id = ANY($1)', [expenses]),
+        database.query('SELECT * FROM splits WHERE expense_id = ANY($1)', [expenses])
+    ])
+    return { payments: paymentResult.rows, splits: splitResult.rows }
+}
