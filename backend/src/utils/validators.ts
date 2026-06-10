@@ -32,23 +32,21 @@ export async function isValidSplit(expenseId: string, payers: { userId: string, 
     return (Math.abs(Math.round(sum * 100) - Math.round(total * 100)) <= 1)
 }
 
-export async function hasUnassignedBills(groupId: string) {
+
+// return boolean together with invalid expenses
+export async function hasInvalidExpenses(groupId: string) {
     const expenses = await getExpenses(groupId)
     const { payments, splits } = await getSplits(expenses)
-
-    const paymentsExpenseIds = payments.map(payment => payment.expense_id)
-    const splitsExpenseIds = splits.map(split => split.expense_id)
-
-    console.log(payments)
-    const missingExpenses = expenses.filter(expense => !paymentsExpenseIds.includes(expense) || !splitsExpenseIds.includes(expense))
+    const invalidExpenses = []
 
     for (const expense of expenses) {
         const relevantPayment = payments.filter(payment => payment.expense_id == expense)
         const paymentMap = relevantPayment.map(payment => ({ userId: payment.user_id, amount: Number(payment.amount) }))
-        const relevantPayment = payments.filter(payment => payment.expense_id == expense)
-        const paymentMap = relevantPayment.map(payment => ({ userId: payment.user_id, amount: Number(payment.amount) }))
+        const relevantSplit = splits.filter(splt => splt.expense_id == expense)
+        const splitMap = relevantSplit.map(splt => ({ userId: splt.user_id, amount: Number(splt.amount) }))
+        const validBills = await isValidSplit(expense, paymentMap) && await isValidSplit(expense, splitMap)
+        if (!validBills) invalidExpenses.push(expense)
     }
 
-
-    return { hasUnassigned: missingExpenses.length > 0, missingExpenses }
+    return { hasInvalidExpense: invalidExpenses.length > 0, invalidExpenses }
 }

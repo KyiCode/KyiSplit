@@ -41,3 +41,9 @@ export async function getSplits(expenses: string[]) {
     ])
     return { payments: paymentResult.rows, splits: splitResult.rows }
 }
+
+export async function getCurrency(expenseId: string) {
+    const currencyRes = await database.query('SELECT currency FROM expenses WHERE id = $1', [expenseId])
+    const currency = currencyRes.rows[0].currency
+    return currency
+}
