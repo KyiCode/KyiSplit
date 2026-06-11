@@ -3,7 +3,6 @@ import { Request, Response } from "express"
 import { getExpenses, getSplits, getUsersInGroup } from "../utils/queries"
 import { hasInvalidExpenses } from "../utils/validators"
 import { convertCurrency } from "../utils/currencyServices"
-import { MaxPriorityQueue } from '@datastructures-js/priority-queue';
 import { calculateBalance } from "../utils/balanceServices";
 
 export const getBalance = async (req: Request, res: Response) => {
