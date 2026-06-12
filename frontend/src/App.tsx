@@ -26,10 +26,10 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<MainPage currGroups={groups} addGroup={handleAddGroup}/>} />
+      <Route path="/" element={<MainPage/>} />
       <Route path="/login" element={<LogInPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/group" element={<GroupPage currExpenses={expenses} />} />
+      <Route path="/group/:groupId" element={<GroupPage currExpenses={expenses} />} />
       <Route path="/addexpense" element={< AddExpensePage addExpense={handleAddExpense} />} />
     </Routes>
 

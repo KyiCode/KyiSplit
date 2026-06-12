@@ -1,70 +1,38 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { useNavigate, useParams } from "react-router-dom"
 import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp } from '../interfaces/interface'
 import ExpenseBox from "../components/ExpenseBox"
-
-const member1: Member = { memberName: "tom", memberEmail: "tom@email.com" }
-const member2: Member = { memberName: "claire", memberEmail: "claire@email.com" }
-const member3: Member = { memberName: "sheldon", memberEmail: "sheldon@email.com" }
-const member4: Member = { memberName: "leonard", memberEmail: "leonard@email.com" }
-
-
-
-const sampleExpense1: Expense = {
-
-    expenseName: "Dinner",
-    expenseTotal: 40,
-    paidBy: [
-        { memberName: "tom", amount: 40 },
-    ],
-    splits: [
-        { memberName: "tom", amount: 20 },
-        { memberName: "claire", amount: 20 },
-    ]
-}
-
-const sampleExpense2: Expense = {
-    expenseName: "Movie",
-    expenseTotal: 30,
-    paidBy: [
-        { memberName: "claire", amount: 30 },
-    ],
-    splits: [
-        { memberName: "tom", amount: 15 },
-        { memberName: "claire", amount: 15 },
-    ]
-}
-
-const group: Group = {
-    groupName: "group1",
-    groupMembers: [member1, member2, member3, member4],
-    expenses: [sampleExpense1, sampleExpense2]
-}
+import { fetchExpenses } from "../api/expenses"
 
 function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
-    const [expenses, setExpenses] = useState<Expense[]>(currExpenses)
+    const [expenses, setExpenses] = useState<Expense[]>([])
+    const { groupId } = useParams()
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
 
     const navigate = useNavigate()
 
+    useEffect(() => {
+        console.log("GGGG")
+        if (groupId) getExpense()
+    }, [groupId])
+
+    async function getExpense() {
+        const data = await fetchExpenses(groupId!)
+        if (data.status == "success") {
+            setExpenses(data.expenses)
+        }
+    }
+
     function handleExitGroup() {
-        alert("Exiting group")
         navigate("/")
     }
 
     function handleAddExpense() {
-        const newExpense: Expense = {
-            expenseName: expenseName,
-            expenseTotal: expenseTotal == "" ? -1 : Number(expenseTotal),
-            paidBy: [],
-            splits: []
-        }
-
-        if (newExpense.expenseName == "" || newExpense.expenseTotal < 0) return
+        // if (newExpense.expenseName == "" || newExpense.expenseTotal < 0) return
         setExpenseName("")
         setExpenseTotal("")
-        setExpenses([...expenses, newExpense])
+        // setExpenses([...expenses, newExpense])
     }
 
     function handleDeleteExpense(expense: Expense) {
@@ -76,7 +44,7 @@ function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
             <h1>Group Page</h1>
             <button onClick={() => handleExitGroup()}> Exit group</button>
 
-            {group.groupMembers.map(member => (<div> {member.memberName} </div>))}
+            {/* {group.groupMembers.map(member => (<div> {member.memberName} </div>))} */}
 
             {expenses.map(expense => (
                 <div>

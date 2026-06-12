@@ -16,7 +16,7 @@ router.post("/addsplit", addSplit)
 
 // router.delete('/deleteexpense')
 
-router.get("/expenselist", getExpenseList)
+router.get("/:groupId", getExpenseList)
 
 
 export default router

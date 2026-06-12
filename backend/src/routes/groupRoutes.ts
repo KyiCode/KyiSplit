@@ -16,7 +16,7 @@ router.post("/addmember", addMember)
 
 router.get("/grouplist", getGroupList)
 
-router.get("/entergroup", enterGroup)
+router.get("/:groupId", enterGroup)
 
 router.get("/:groupId/getbalance", getBalance)
 router.get("/:groupId/getbalance", getBalance)

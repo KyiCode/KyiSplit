@@ -4,9 +4,9 @@ export interface Member {
 }
 
 export interface Group {
+    groupId: string,
     groupName: string
     groupMembers: Member[]
-    expenses: Expense[]
 }
 
 export interface Expense {
@@ -22,7 +22,7 @@ export interface ExpenseMemberAmount {
 }
 
 export interface Payment extends ExpenseMemberAmount {
- 
+
 }
 
 export interface Split extends ExpenseMemberAmount {

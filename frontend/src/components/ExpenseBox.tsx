@@ -15,9 +15,9 @@ function ExpenseBox({ expense, handleDelete }: ExpenseBoxProp) {
     return (
         <div>
             <h2>{expense.expenseName} <button onClick={() => handleDelete(expense)}>Delete Expense</button> </h2>
-            <h3> total (${expense.expenseTotal.toFixed(2)})</h3>
-            <div> Paid By: {expense.paidBy.map(payment => `${payment.memberName} ($${payment.amount})`).join(", ")} </div>
-            <div> Splits: {expense.splits.map(split => `${split.memberName} ($${split.amount})`).join(", ")} </div>
+            {/* <h3> total (${expense.expenseTotal.toFixed(2)})</h3> */}
+            {/* <div> Paid By: {expense.paidBy.map(payment => `${payment.memberName} ($${payment.amount})`).join(", ")} </div>
+            <div> Splits: {expense.splits.map(split => `${split.memberName} ($${split.amount})`).join(", ")} </div> */}
             <h2> . </h2>
             <h2> . </h2>
 

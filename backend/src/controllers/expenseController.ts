@@ -122,20 +122,16 @@ export const addSplit = async (req: Request, res: Response) => {
 export const getExpenseList = async (req: Request, res: Response) => {
     console.log("getting expense list")
     const user = req.user.userId
-    const { groupId } = req.body
+    const groupId = req.params.groupId as string
     try {
         if (!groupId) return res.status(400).json({ error: "request error" })
         if (!(await hasUser(user))) return res.status(400).json({ error: "no user" })
         if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: "user not authorised or group do not exist" })
 
-        const expenseIds = await getExpenses(groupId)
-        const { payments, splits } = await getSplits(expenseIds)
+        const expenses = await getExpenses(groupId)
+        // const { payments, splits } = await getSplits(expenses.expenseId)
 
-        return res.status(200).json({
-            expenseId: expenseIds,
-            payments: payments,
-            splits: splits
-        })
+        return res.status(200).json({ status: "success", expenses })  //{expenseId: expenses.id, expenseName: expenses.name}
     } catch (error) {
         console.log(error)
         return res.status(501).json({ error: 'Server error getting expenses' })

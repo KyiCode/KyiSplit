@@ -27,10 +27,10 @@ export async function getExpenseTotal(expenseId: string) {
 
 export async function getExpenses(groupId: string) {
     const expenseListResult = await database.query(
-        'SELECT id FROM expenses WHERE group_id = $1',
+        'SELECT * FROM expenses WHERE group_id = $1',
         [groupId]
     )
-    return expenseListResult.rows.map((expenses) => expenses.id)
+    return expenseListResult.rows.map((expenses) => ({expenseId: expenses.id, expenseName: expenses.name}))
 }
 
 export async function getSplits(expenses: string[]) {
@@ -46,4 +46,39 @@ export async function getCurrency(expenseId: string) {
     const currencyRes = await database.query('SELECT currency FROM expenses WHERE id = $1', [expenseId])
     const currency = currencyRes.rows[0].currency
     return currency
+}
+
+export async function getUser(email: string) {
+    const user = await database.query(
+        "SELECT * FROM users WHERE email = $1",
+        [email]
+    )
+    return user.rows[0]
+}
+
+export async function getUserGroups(userId: string) {
+    const groupResults = await database.query(
+        'SELECT * FROM group_members WHERE user_id = $1',
+        [userId]
+    )
+    return groupResults.rows
+}
+
+export async function getGroupName(groupId: string) {
+    const groupName = await database.query(
+        'SELECT name FROM groups WHERE id = $1',
+        [groupId]
+    )
+    return groupName.rows[0].name
+}
+
+export async function getGroupMembers(groupId: string) {
+    const groupMembers = await database.query(
+        'SELECT * FROM group_members WHERE group_id = $1',
+        [groupId]
+    )
+    return groupMembers.rows.map((groupMember) => ({
+        userId: groupMember.user_id,
+        userGroupName: groupMember.user_group_name
+    }))
 }

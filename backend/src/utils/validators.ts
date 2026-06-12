@@ -50,3 +50,12 @@ export async function hasInvalidExpenses(groupId: string) {
 
     return { hasInvalidExpense: invalidExpenses.length > 0, invalidExpenses }
 }
+
+export async function hasAccount(email: string) {
+    const hasEmail = await database.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+    )
+    return hasEmail.rows.length > 0
+}
+

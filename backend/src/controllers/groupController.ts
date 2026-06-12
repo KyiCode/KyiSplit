@@ -2,13 +2,15 @@ import express from 'express'
 import database from '../db'
 import { Request, Response } from 'express'
 import { json } from 'node:stream/consumers'
+import { getGroupMembers, getGroupName, getUserGroups } from '../utils/queries'
+import { isUserAuthorised } from '../utils/validators'
 
 
 export const addGroup = async (req: Request, res: Response) => {
     console.log("adding group")
+    const userId = req.user.userId
+    const groupName = req.body.groupName
     try {
-        const { userId, groupName } = req.body
-
         const result = await database.query(
             'INSERT into groups (name) VALUES ($1) RETURNING id',
             [groupName]
@@ -21,10 +23,10 @@ export const addGroup = async (req: Request, res: Response) => {
             [userId, groupId]
         )
 
-        return res.status(201).json({ message: "Group Added" })
+        return res.status(201).json({ status: "success", message: "Group Added" })
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ error: "server error adding group" })
+        return res.status(500).json({ status: "error", error: "server error adding group" })
     }
 
 }
@@ -67,39 +69,54 @@ export const addMember = async (req: Request, res: Response) => {
 
 export const getGroupList = async (req: Request, res: Response) => {
     console.log("getting group list")
+    const user = req.user.userId
     try {
-        const user = req.user.userId
-
-        const groupResults = await database.query(
-            'SELECT group_id FROM group_members WHERE user_id = $1',
-            [user]
+        const groups = await getUserGroups(user)
+        const groupDetails = await Promise.all(
+            groups.map(async (group) => ({
+                groupId: group.group_id,
+                groupName: await getGroupName(group.group_id),
+                groupMembers: await getGroupMembers(group.group_id)
+            }))
         )
-
-        const groupIds = groupResults.rows
-
-        const queryResult = await Promise.all(groupIds.map(grp => database.query(
-            'SELECT * FROM group_members WHERE group_id = $1',
-            [grp.group_id]
-        )))
-
-        const groupMembers = queryResult.map(res => res.rows).flat()
-
-        return res.json(groupMembers)
+        return res.status(200).json({ status: "success", user, groupDetails })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ error: "server error getting grouplist" })
     }
 }
 
+// export const getGroupMembers = (req: Request, res: Response) => {
+//     console.log("getting group members")
+//     try {
+//         const user = req.user.userId
+
+//         const groupIds = getUserGroups(user)
+
+//         const queryResult = await Promise.all(groupIds.map(grp => database.query(
+//             'SELECT * FROM group_members WHERE group_id = $1',
+//             [grp.group_id]
+//         )))
+
+//         const groupMembers = queryResult.map(res => res.rows).flat()
+
+//         return res.json(groupMembers)
+//     } catch (error) {
+//         console.log(error)
+//         return res.status(500).json({ error: "server error getting grouplist" })
+//     }
+
+// }
+
 export const enterGroup = async (req: Request, res: Response) => {
     console.log("entering group")
+    const user = req.user.userId
+    const group = req.params.groupId as string
     try {
-        const user = req.body.user
-        const group = req.body.group
-
-        return res.json(user)
+        const valid = await isUserAuthorised(user, group)
+        return valid ? res.status(200).json({ status: "success" }) : res.status(400).json({ message: "User unauthorised or Invalid group" })
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ error: "server error entering group" })
+        return res.status(500).json({ message: "server error entering group" })
     }
 }

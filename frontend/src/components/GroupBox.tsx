@@ -3,16 +3,16 @@ import type { Member, Group } from '../interfaces/interface'
 
 
 
-function GroupBox({ groupName, groupMembers, onEnterGroup }: Group & { onEnterGroup: (groupDetails: Group) => void }) {
+function GroupBox({ group, onEnterGroup }: { group: Group, onEnterGroup: (groupId: string) => void }) {
     function handleEnterGroup() {
-        onEnterGroup({ groupName, groupMembers, expenses: [] })
+        onEnterGroup(group.groupId)
     }
 
     return (
         <div>
-            <div>{groupName}</div>
+            <div>{group.groupName}</div>
             <div>
-                {groupMembers.map(
+                {group.groupMembers.map(
                     member => {
                         return <div>{member.memberName}</div>
                     })}
