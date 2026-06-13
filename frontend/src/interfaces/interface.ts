@@ -9,11 +9,20 @@ export interface Group {
     groupMembers: Member[]
 }
 
-export interface Expense {
-    expenseName: string
-    expenseTotal: number
-    paidBy: Payment[]
-    splits: Split[]
+// interfaces/interface.ts
+export interface ExpenseType {
+    expenseId: string,
+    groupId: string,
+    expenseName: string,
+    expenseTotal: string,
+    date: string,
+    createdAt: string,
+    currency: string | null
+}
+
+export interface CurrencyType {
+    currencyIso: string,
+    currencyName: string
 }
 
 export interface ExpenseMemberAmount {
@@ -30,7 +39,7 @@ export interface Split extends ExpenseMemberAmount {
 
 
 
-export interface ExpenseBoxProp {
-    expense: Expense
-    handleDelete: (expense: Expense) => void
-}
+// export interface ExpenseBoxProp {
+//     expense: Expense
+//     handleDelete: (expense: Expense) => void
+// }

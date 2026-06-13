@@ -40,8 +40,11 @@ function MainPage() {
         try {
             const data = await enterGroup(groupId)
             console.log(data)
-            if (data.status == "success") navigate(`/group/${groupId}`)
-            console.log("error entering group")
+            if (data.status == "success") {
+                navigate(`/group/${groupId}`)
+            } else {
+                console.log("error entering group")
+            }
         } catch (error) {
             console.log(error)
         }

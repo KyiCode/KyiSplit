@@ -12,3 +12,17 @@ export async function fetchExpenses(groupId: string) {
     }
 
 }
+
+export async function createExpense(groupId: string) {
+    try {
+        const res = await fetch(`${BASE_URL}/api/expenses/addexpense`, {
+            credentials: "include",
+            method: "POST",
+            headers: { "ContentType": "application/json" },
+            body: JSON.stringify(groupId)
+        })
+        return res.json()
+    } catch (error) {
+        console.log(error)
+    }
+}

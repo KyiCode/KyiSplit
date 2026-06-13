@@ -6,11 +6,11 @@ import SignUpPage from './pages/SignUpPage'
 import GroupPage from './pages/GroupPage'
 import AddExpensePage from './pages/AddExpensePage'
 
-import { type Group, type Expense, type Member, type Payment, type Split, type ExpenseBoxProp, type ExpenseMemberAmount } from './interfaces/interface'
+import { type Group, type ExpenseType, type Member, type Payment, type Split, type ExpenseMemberAmount } from './interfaces/interface'
 
 function App() {
   const [groups, setGroups] = useState<Group[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [expenses, setExpenses] = useState<ExpenseType[]>([])
 
   function handleAddGroup(newGroup: Group) {
     setGroups(
@@ -18,19 +18,19 @@ function App() {
     )
   }
 
-  function handleAddExpense(newExpense: Expense) {
-    setExpenses(
-      [...expenses, newExpense]
-    )
-  }
+  // function handleAddExpense(newExpense: Expense) {
+  //   setExpenses(
+  //     [...expenses, newExpense]
+  //   )
+  // }
 
   return (
     <Routes>
-      <Route path="/" element={<MainPage/>} />
+      <Route path="/" element={<MainPage />} />
       <Route path="/login" element={<LogInPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/group/:groupId" element={<GroupPage currExpenses={expenses} />} />
-      <Route path="/addexpense" element={< AddExpensePage addExpense={handleAddExpense} />} />
+      <Route path="/group/:groupId" element={<GroupPage/>} />
+      <Route path="/:groupId/addexpense" element={< AddExpensePage />} />
     </Routes>
 
   )

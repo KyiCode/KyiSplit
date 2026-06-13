@@ -1,8 +1,10 @@
 import { useState } from "react";
 
-import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp, ExpenseMemberAmount } from '../interfaces/interface'
+import type { Group, Member, Payment, Split, ExpenseBoxProp, ExpenseMemberAmount } from '../interfaces/interface'
 
-function DropDownForm({ group, assignPayer }: { group: Group, assignPayer: (expenseMemberAmount: ExpenseMemberAmount[]) => void }) {
+function DropDownForm({ groupId, assignPayer }: { groupId: string, assignPayer: (expenseMemberAmount: ExpenseMemberAmount[]) => void }) {
+
+
 
     const [expenseData, setExpenseData] = useState<Record<string, number>>(
         Object.fromEntries(group.groupMembers.map(member => [member.memberName, 0]))

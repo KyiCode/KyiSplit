@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import type { Group, Expense, Member, Payment, Split, ExpenseBoxProp } from '../interfaces/interface'
+import type { Group, ExpenseType, Member, Payment, Split } from '../interfaces/interface'
 import ExpenseBox from "../components/ExpenseBox"
 import { fetchExpenses } from "../api/expenses"
 
-function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
-    const [expenses, setExpenses] = useState<Expense[]>([])
+function GroupPage() {
+    const [expenses, setExpenses] = useState<ExpenseType[]>([])
     const { groupId } = useParams()
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
@@ -20,7 +20,7 @@ function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
     async function getExpense() {
         const data = await fetchExpenses(groupId!)
         if (data.status == "success") {
-            setExpenses(data.expenses)
+            setExpenses(data.mappedExpenses)
         }
     }
 
@@ -35,7 +35,7 @@ function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
         // setExpenses([...expenses, newExpense])
     }
 
-    function handleDeleteExpense(expense: Expense) {
+    function handleDeleteExpense(expense: ExpenseType) {
         setExpenses(expenses.filter(e => e.expenseName != expense.expenseName))
     }
 
@@ -49,10 +49,11 @@ function GroupPage({ currExpenses }: { currExpenses: Expense[] }) {
             {expenses.map(expense => (
                 <div>
 
-                    <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} />
+                    {/* <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} /> */}
+                    <ExpenseBox key={expense.expenseName} expense={expense} />
                 </div>
             ))}
-            <button onClick={() => navigate("/addexpense")}> Add Expense</button>
+            <button onClick={() => navigate(`/${groupId}/addexpense`)}> Add Expense</button>
         </div>
     )
 }

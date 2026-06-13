@@ -30,7 +30,7 @@ export async function getExpenses(groupId: string) {
         'SELECT * FROM expenses WHERE group_id = $1',
         [groupId]
     )
-    return expenseListResult.rows.map((expenses) => ({expenseId: expenses.id, expenseName: expenses.name}))
+    return expenseListResult.rows
 }
 
 export async function getSplits(expenses: string[]) {

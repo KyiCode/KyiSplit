@@ -130,8 +130,16 @@ export const getExpenseList = async (req: Request, res: Response) => {
 
         const expenses = await getExpenses(groupId)
         // const { payments, splits } = await getSplits(expenses.expenseId)
-
-        return res.status(200).json({ status: "success", expenses })  //{expenseId: expenses.id, expenseName: expenses.name}
+        const mappedExpenses = expenses.map(e => ({
+            expenseId: e.id,
+            groupId: e.group_id,
+            expenseName: e.name,
+            expenseTotal: e.total,
+            date: e.date,
+            createdAt: e.created_at,
+            currency: e.currency
+        }))
+        return res.status(200).json({ status: "success", mappedExpenses})  //{expenseId: expenses.id, expenseName: expenses.name}
     } catch (error) {
         console.log(error)
         return res.status(501).json({ error: 'Server error getting expenses' })
