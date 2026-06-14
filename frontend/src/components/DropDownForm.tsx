@@ -1,38 +1,49 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { Group, Member, Payment, Split, ExpenseBoxProp, ExpenseMemberAmount } from '../interfaces/interface'
+import { type Group, type Member, type Payment, type Split, type ExpenseMemberAmount, type GroupMemberType } from '../interfaces/interface'
+import { fetchGroupMembers } from "../api/groups";
 
-function DropDownForm({ groupId, assignPayer }: { groupId: string, assignPayer: (expenseMemberAmount: ExpenseMemberAmount[]) => void }) {
+// function DropDownForm({ groupId, assignPayer }: { groupId: string, assignPayer: (expenseMemberAmount: ExpenseMemberAmount[]) => void }) {
+function DropDownForm({ groupId }: { groupId: string }) {
 
+    const [groupMembers, setGroupMembers] = useState<GroupMemberType[]>([])
 
+    useEffect(() => {
+        getMembers()
+    }, [])
 
-    const [expenseData, setExpenseData] = useState<Record<string, number>>(
-        Object.fromEntries(group.groupMembers.map(member => [member.memberName, 0]))
-    )
-
-    function handleAmountChange(memberName: string, memberAmount: string) {
-        let amount = memberAmount == "" ? 0 : Number(memberAmount)
-        setExpenseData({
-            ...expenseData,
-            [memberName]: amount
-        })
+    async function getMembers() {
+        const data = await fetchGroupMembers(groupId)
+        if (data.status = "success") setGroupMembers(data)
     }
 
-    function handleDone() {
-        const result: ExpenseMemberAmount[] = Object.entries(expenseData)
-            .filter(([memberName, memberAmount]) => memberAmount > 0)
-            .map(([memberName, memberAmount]) => { return { memberName: memberName, amount: memberAmount } })
-        assignPayer(result)
-    }
+    // const [expenseData, setExpenseData] = useState<Record<string, number>>(
+    //     Object.fromEntries(group.groupMembers.map(member => [member.memberName, 0]))
+    // )
+
+    // function handleAmountChange(memberName: string, memberAmount: string) {
+    //     let amount = memberAmount == "" ? 0 : Number(memberAmount)
+    //     setExpenseData({
+    //         ...expenseData,
+    //         [memberName]: amount
+    //     })
+    // }
+
+    // function handleDone() {
+    //     const result: ExpenseMemberAmount[] = Object.entries(expenseData)
+    //         .filter(([memberName, memberAmount]) => memberAmount > 0)
+    //         .map(([memberName, memberAmount]) => { return { memberName: memberName, amount: memberAmount } })
+    //     assignPayer(result)
+    // }
 
     return (
         <div>
-            {group.groupMembers.map(member =>
+            {groupMembers.map(member =>
                 <div>
-                    {member.memberName}
-                    <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input>
+                    {member.userId}
+                    {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
                 </div>)}
-            < button onClick={() => handleDone()}>Done</button>
+            {/* < button onClick={() => handleDone()}>Done</button> */}
         </div >
     )
 }

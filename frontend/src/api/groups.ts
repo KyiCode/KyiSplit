@@ -29,7 +29,7 @@ export async function createGroup(groupName: string) {
     }
 }
 
-export async function enterGroup(groupId: string) {
+export async function fetchGroup(groupId: string) {
     try {
         const res = await fetch(`${BASE_URL}/api/groups/${groupId}`, {
             credentials: "include",
@@ -39,4 +39,43 @@ export async function enterGroup(groupId: string) {
         console.error("Failed to fetch groups:", error)
         throw error  // re-throw so the caller knows it failed
     }
+}
+
+export async function fetchGroupMembers(groupId: string) {
+    try {
+        const res = await fetch(`${BASE_URL}/api/groups/${groupId}/members`, {
+            credentials: "include",
+        })
+        return res.json()
+    } catch (error) {
+        console.error("Failed to fetch group members:", error)
+        throw error  // re-throw so the caller knows it failed
+    }
+}
+
+export async function generateInvite(groupId: string) {
+    try {
+        const res = await fetch(`${BASE_URL}/api/groups/${groupId}/invite`, {
+            credentials: "include",
+            method: "POST"
+        })
+        return res.json()
+    } catch (error) {
+        console.error("Failed to generate invite:", error)
+        throw error  // re-throw so the caller knows it failed
+    }
+}
+
+export async function joinGroup(tokenId: string) {
+    try {
+        const res = await fetch(`${BASE_URL}/api/groups/join/${tokenId}`, {
+            credentials: "include",
+            method: "POST"
+        })
+        return res.json()
+    } catch (error) {
+        console.error("Failed to generate invite:", error)
+        throw error  // re-throw so the caller knows it failed
+    }
+
 }

@@ -16,7 +16,14 @@ function LogInPage() {
         const data = await logIn(email, password)
         console.log(`log in: ${data}`)
         if (data.status === "success") {
-            navigate("/")
+            const pendingInvite = localStorage.getItem("pendingInvite")
+            if (pendingInvite) {
+                localStorage.removeItem("pendingInvite")
+                navigate(`/join/${pendingInvite}`)
+            } else {
+                navigate("/")
+            }
+
         } else {
             setLogInFail(true)
             setErrorMessage(data.message)

@@ -3,7 +3,7 @@ import AddGroup from "../components/AddGroup"
 import GroupList from "../components/GroupList"
 import { useNavigate } from "react-router-dom"
 import AccountButton from "../components/AccountButton"
-import { createGroup, enterGroup, fetchGroups } from "../api/groups"
+import { createGroup, fetchGroup, fetchGroups } from "../api/groups"
 
 import type { Member, Group } from '../interfaces/interface'
 
@@ -38,7 +38,7 @@ function MainPage() {
 
     async function onEnterGroup(groupId: string) {
         try {
-            const data = await enterGroup(groupId)
+            const data = await fetchGroup(groupId)
             console.log(data)
             if (data.status == "success") {
                 navigate(`/group/${groupId}`)

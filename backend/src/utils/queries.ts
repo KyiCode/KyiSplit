@@ -72,7 +72,7 @@ export async function getGroupName(groupId: string) {
     return groupName.rows[0].name
 }
 
-export async function getGroupMembers(groupId: string) {
+export async function queryGroupMembers(groupId: string) {
     const groupMembers = await database.query(
         'SELECT * FROM group_members WHERE group_id = $1',
         [groupId]

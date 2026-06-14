@@ -59,3 +59,11 @@ export async function hasAccount(email: string) {
     return hasEmail.rows.length > 0
 }
 
+export async function isValidInvite(token: string) {
+    const hasToken = await database.query(
+        'SELECT group_id FROM invites WHERE token = $1',
+        [token]
+    )
+    const isValid = hasToken.rows.length > 0
+    return { isValid: isValid, groupId: hasToken.rows[0].group_id }
+}

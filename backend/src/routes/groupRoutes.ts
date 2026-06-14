@@ -1,9 +1,11 @@
 import express from 'express'
 
-import { addGroup, addMember, enterGroup, getGroupList } from '../controllers/groupController'
+import { addGroup, addMember, getGroup, getGroupList, getGroupMembers, getInvite, joinGroup } from '../controllers/groupController'
 import { getBalance } from '../controllers/balanceController'
 
 import authMiddleware from '../middleware/authMiddleware'
+
+
 
 
 const router = express.Router()
@@ -16,9 +18,13 @@ router.post("/addmember", addMember)
 
 router.get("/grouplist", getGroupList)
 
-router.get("/:groupId", enterGroup)
+router.get("/:groupId", getGroup)
 
-router.get("/:groupId/getbalance", getBalance)
+router.get("/:groupId/members", getGroupMembers)
+
+router.post("/:groupId/invite", getInvite)
+router.post("/join/:token", joinGroup)
+
 router.get("/:groupId/getbalance", getBalance)
 
 export default router

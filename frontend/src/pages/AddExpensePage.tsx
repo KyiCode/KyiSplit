@@ -36,6 +36,7 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         if (isValidExpense(expenseName, expenseTotal) && hasCurrency) {
             setHasExpense(true)
         } else {
+            console.log("no or invalid expense")
             setHasExpense(false)
         }
     }, [expenseName, expenseTotal, hasCurrency])
@@ -99,7 +100,8 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
                 <>
                     <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
                     {isAssigningPayer &&
-                        <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
+                        // <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
+                        <DropDownForm groupId={groupId!} />
                     }
                 </>
             }

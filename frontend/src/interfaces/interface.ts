@@ -30,6 +30,11 @@ export interface ExpenseMemberAmount {
     amount: number
 }
 
+export interface GroupMemberType {
+    userId: string,
+    userGroupName: string
+}
+
 export interface Payment extends ExpenseMemberAmount {
 
 }
