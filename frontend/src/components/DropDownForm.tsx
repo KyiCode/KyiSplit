@@ -40,7 +40,7 @@ function DropDownForm({ groupId }: { groupId: string }) {
         <div>
             {groupMembers.map(member =>
                 <div>
-                    {member.userId}
+                    {member.userGroupName} <input placeholder=" amount"></input>
                     {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
                 </div>)}
             {/* < button onClick={() => handleDone()}>Done</button> */}

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import AccountButton from "../components/AccountButton"
 import { createGroup, fetchGroup, fetchGroups } from "../api/groups"
 
-import type { Member, Group } from '../interfaces/interface'
+import type { Group } from '../interfaces/interface'
 
 
 function MainPage() {
@@ -27,9 +27,13 @@ function MainPage() {
         }
     }
 
-    async function handleAddGroup(groupName: string) {
+    async function handleAddGroup(groupName: string, groupUserName: string) {
         try {
-            const data = await createGroup(groupName)
+            if (!groupName || !groupUserName) {
+                console.log("empty group name or username")
+                return
+            }
+            const data = await createGroup(groupName, groupUserName)
             if (data.status == "success") getGroups()
         } catch (error) {
             console.log(error)

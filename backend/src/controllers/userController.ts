@@ -53,3 +53,11 @@ export const login = async (req: Request, res: Response) => {
         res.status(500).json({ status: "fail", message: 'Server error' })
     }
 }
+
+export const verifySession = async (req: Request, res: Response) => {
+    if (req.user.userId) {
+        return res.json({ status: "success" });
+    }
+
+    return res.json({ status: "fail" });
+};

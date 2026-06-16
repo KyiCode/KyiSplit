@@ -1,22 +1,22 @@
 import { use, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import ExpenseBox from "../components/ExpenseBox"
 import DropDownForm from "../components/DropDownForm"
 import Modal from "../components/Modal"
 
-import type { Group, ExpenseType, Member, Payment, Split, ExpenseMemberAmount, CurrencyType } from '../interfaces/interface'
-import { createExpense } from "../api/expenses"
+import type { Group, ExpenseType, Member, Payment, Split, GroupMemberType, CurrencyType } from '../interfaces/interface'
 import CurrencyPicker from "../components/CurrencyPicker"
 import DatePicker from "../components/DatePicker"
-
+import { fetchGroupMembers } from "../api/groups";
 
 function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
     const { groupId } = useParams()
     if (!groupId) console.log("addexpense no gid in params")
 
+
+    const [groupMembers, setGroupMembers] = useState<GroupMemberType[]>([])
+
     const [hasExpense, setHasExpense] = useState(false)
-    const [expense, setExpense] = useState<ExpenseType | null>(null)
 
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false)
 
@@ -32,8 +32,11 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
     const [isAssigningPayer, setIsAssigningPayer] = useState(false)
     const [isAssigningSplit, setIsAssigningSplit] = useState(false)
 
+
+
     useEffect(() => {
-        if (isValidExpense(expenseName, expenseTotal) && hasCurrency) {
+        if (isValidExpense() && hasCurrency) {
+            getMembers()
             setHasExpense(true)
         } else {
             console.log("no or invalid expense")
@@ -42,7 +45,7 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
     }, [expenseName, expenseTotal, hasCurrency])
 
 
-    function isValidExpense(expenseName: string, expenseTotal: string) {
+    function isValidExpense() {
         return (
             expenseName.trim() !== "" &&
             expenseTotal.trim() !== "" &&
@@ -51,15 +54,51 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         );
     }
 
+    async function getMembers() {
+        const data = await fetchGroupMembers(groupId!)
+        if (data.status = "success") setGroupMembers(data)
+    }
+
     function handleSelectCurrency(currency: CurrencyType) {
         setExpenseCurrency(currency)
         setShowCurrencyPicker(false)
         setHasCurrency(true)
     }
 
-    function handleAddExpense() {
+    const [amountPaid, setAmountPaid] = useState<Record<string, number>>({});
+    const [amountSplit, setAmountSplit] = useState<Record<string, number>>({});
 
+    const handleAmountPaidChange = (userId: string, value: string) => {
+        const amount = Number(value)
+        if (amount < 0 || Number.isNaN(amount)) return
+
+        setAmountPaid(prev => ({
+            ...prev,
+            [userId]: amount || 0
+        }));
+    };
+
+    const handleAmountSplitChange = (userId: string, value: string) => {
+        const amount = Number(value)
+        if (amount < 0 || Number.isNaN(amount)) return
+        setAmountSplit(prev => ({
+            ...prev,
+            [userId]: amount || 0
+        }));
+    };
+
+    function isValidSplit() {
+        const totalPaid = Object.values(amountPaid).reduce((sum, val) => sum + val)
+        const totalSplit = Object.values(amountSplit).reduce((sum, val) => sum + val)
+        return totalPaid == Number(expenseTotal) && totalSplit == Number(expenseTotal)
     }
+
+    function handleAddExpense() {
+        if (isValidExpense() && isValidSplit()) {
+
+        }
+    }
+    
     return (
         <>
             <h1>Add Expense</h1>
@@ -69,15 +108,14 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
 
             <h2>
                 <input type="text" value={expenseName} onChange={(e) => setExpenseName(e.target.value)} placeholder="Enter description" />
-            </h2>
 
-            <h2>
                 <input type="number" value={expenseTotal ?? ""} onChange={(e) => setExpenseTotal(e.target.value)} placeholder="Enter amount" />
-            </h2>
 
-            <h2>
                 <button onClick={() => setShowCurrencyPicker(true)} >currency</button>
                 {hasCurrency && <div>{expenseCurrency?.currencyIso}</div>}
+
+                <DatePicker onChange={setExpenseDate}></DatePicker>
+
             </h2>
 
             {showCurrencyPicker && (
@@ -91,9 +129,6 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
             {/* <h2>
                 <input type="text" value={expenseCurrency ?? ""} onChange={(e) => setExpenseDate(e.target.value)} placeholder="Enter currency" />
             </h2> */}
-            <h2>
-                <DatePicker onChange={setExpenseDate}></DatePicker>
-            </h2>
 
 
             {hasExpense &&
@@ -101,17 +136,34 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
                     <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
                     {isAssigningPayer &&
                         // <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
-                        <DropDownForm groupId={groupId!} />
+                        // <DropDownForm groupId={groupId!} />
+                        <div>
+                            {groupMembers.map(member =>
+                                <div>
+                                    {member.userGroupName} <input type="number" value={amountPaid[member.userId]} onChange={(e) => handleAmountPaidChange(member.userId, e.target.value)} placeholder=" amount"></input>
+                                    {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
+                                </div>)}
+                            {/* < button onClick={() => handleDone()}>Done</button> */}
+                        </div >
                     }
                 </>
             }
 
             {hasExpense &&
                 <>
-                    <button onClick={() => setIsAssigningSplit(!isAssigningSplit)}>Assign split</button>
-                    {/* {isAssigningSplit &&
-                        // <DropDownForm group={group} assignPayer={handleAssignSplit} />
-                    } */}
+                    <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
+                    {isAssigningPayer &&
+                        // <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
+                        // <DropDownForm groupId={groupId!} />
+                        <div>
+                            {groupMembers.map(member =>
+                                <div>
+                                    {member.userGroupName} <input type="number" value={amountPaid[member.userId]} onChange={(e) => handleAmountSplitChange(member.userId, e.target.value)} placeholder=" amount"></input>
+                                    {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
+                                </div>)}
+                            {/* < button onClick={() => handleDone()}>Done</button> */}
+                        </div >
+                    }
                 </>
             }
 

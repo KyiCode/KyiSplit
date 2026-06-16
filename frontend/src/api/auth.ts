@@ -20,3 +20,10 @@ export async function logIn(email: string, password: string) {
     })
     return res.json()
 }
+
+export async function verifySession() {
+    const res = await fetch(`${BASE_URL}/api/users/verifysession`, {
+        credentials:"include"
+    })
+    return res.json()
+}

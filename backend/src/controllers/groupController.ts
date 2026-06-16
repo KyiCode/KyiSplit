@@ -10,7 +10,7 @@ import { generateInvite } from '../utils/inviteGenerator'
 export const addGroup = async (req: Request, res: Response) => {
     console.log("adding group")
     const userId = req.user.userId
-    const groupName = req.body.groupName
+    const { groupName, groupUserName } = req.body
     try {
         const result = await database.query(
             'INSERT into groups (name) VALUES ($1) RETURNING id',
@@ -20,8 +20,8 @@ export const addGroup = async (req: Request, res: Response) => {
         const groupId = result.rows[0].id
 
         await database.query(
-            'INSERT into group_members (user_id,group_id) VALUES ($1, $2)',
-            [userId, groupId]
+            'INSERT into group_members (user_id,group_id, user_group_name) VALUES ($1, $2, $3)',
+            [userId, groupId, groupUserName]
         )
 
         return res.status(201).json({ status: "success", message: "Group Added" })
@@ -146,6 +146,7 @@ export const joinGroup = async (req: Request, res: Response) => {
     console.log("attempting join invtie")
     const user = req.user.userId
     const token = req.params.token as string
+    const userName = req.body.userName
     if (!user || !token) {
         console.log("here")
         return res.status(400).json({ status: "fail", message: "Expired cookie / Invalid token" })
@@ -155,8 +156,8 @@ export const joinGroup = async (req: Request, res: Response) => {
         if (!isValid || !groupId) return res.status(400).json({ status: "fail", message: "not valid token" })
         if (await isUserAuthorised(user, groupId)) return res.status(400).json({ status: "fail", message: "user already in group" })
         const resu = await database.query(
-            'INSERT INTO group_members (group_id, user_id) VALUES ($1,$2)',
-            [groupId, user]
+            'INSERT INTO group_members (group_id, user_id, user_group_name) VALUES ($1,$2, $3)',
+            [groupId, user, userName]
         )
 
         console.log(resu)

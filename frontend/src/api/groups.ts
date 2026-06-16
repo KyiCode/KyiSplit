@@ -14,13 +14,13 @@ export async function fetchGroups() {
     }
 }
 
-export async function createGroup(groupName: string) {
+export async function createGroup(groupName: string, groupUserName: string) {
     try {
         const res = await fetch(`${BASE_URL}/api/groups/addgroup`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ groupName })
+            body: JSON.stringify({ groupName , groupUserName})
         })
         return res.json()
     } catch (error) {
@@ -40,6 +40,14 @@ export async function fetchGroup(groupId: string) {
         throw error  // re-throw so the caller knows it failed
     }
 }
+
+// export async function fetchUserName(groupId: string) {
+//     try {
+//         const res = fetchGroupMembers(groupId)
+//         res
+//     }
+
+// }
 
 export async function fetchGroupMembers(groupId: string) {
     try {
@@ -66,11 +74,13 @@ export async function generateInvite(groupId: string) {
     }
 }
 
-export async function joinGroup(tokenId: string) {
+export async function joinGroup(tokenId: string, userName: string) {
     try {
         const res = await fetch(`${BASE_URL}/api/groups/join/${tokenId}`, {
             credentials: "include",
-            method: "POST"
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({userName})
         })
         return res.json()
     } catch (error) {

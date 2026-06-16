@@ -12,6 +12,7 @@ function GroupPage() {
     const [groupName, setGroupName] = useState("")
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
+    const [hasUserName, setHasUserName] = useState(false)
 
     const [isInvite, setIsInvite] = useState(false)
 
@@ -19,8 +20,11 @@ function GroupPage() {
 
     useEffect(() => {
         console.log("GGGG")
-        if (groupId) getExpense()
-        if (groupId) getGroup()
+        if (groupId) {
+            getGroup()
+            // getUserName()
+            getExpense()
+        }
     }, [groupId])
 
     async function getGroup() {
@@ -29,6 +33,13 @@ function GroupPage() {
             setGroupName(data.groupName)
         }
     }
+
+    // async function getUserName() {
+    //     const data = await fetchUserName(groupId!)
+    //     if (data.status == "success") {
+    //         setHasUserName(true)
+    //     }
+    // }
 
     async function getExpense() {
         const data = await fetchExpenses(groupId!)
@@ -69,25 +80,30 @@ function GroupPage() {
 
             <h1>{groupName}</h1>
 
-            {!isInvite && <button onClick={() => handleInvite()}>Invite users</button>}
-            {isInvite && <>
-                <div>invite link: </div>
-                <div>{inviteLink}</div>
-                <button onClick={() => setIsInvite(false)}> X </button>
-            </>}
 
-            {/* {group.groupMembers.map(member => (<div> {member.memberName} </div>))} */}
 
-            {
-                expenses.map(expense => (
-                    <div>
+            <>
+                {!isInvite && <button onClick={() => handleInvite()}>Invite users</button>}
+                {isInvite && <>
+                    <div>invite link: </div>
+                    <div>{inviteLink}</div>
+                    <button onClick={() => setIsInvite(false)}> X </button>
+                </>}
 
-                        {/* <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} /> */}
-                        <ExpenseBox key={expense.expenseName} expense={expense} />
-                    </div>
-                ))
-            }
-            <button onClick={() => navigate(`/${groupId}/addexpense`)}> Add Expense</button>
+                {/* {group.groupMembers.map(member => (<div> {member.memberName} </div>))} */}
+
+                {
+                    expenses.map(expense => (
+                        <div>
+
+                            {/* <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} /> */}
+                            <ExpenseBox key={expense.expenseName} expense={expense} />
+                        </div>
+                    ))
+                }
+                <button onClick={() => navigate(`/${groupId}/addexpense`)}> Add Expense</button>
+            </>
+
         </div >
     )
 }
