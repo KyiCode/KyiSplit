@@ -13,13 +13,18 @@ export async function fetchExpenses(groupId: string) {
 
 }
 
-export async function createExpense(groupId: string) {
+export async function createExpense(groupId: string, expenseName: string, expenseTotal: string,
+    expenseDate: string, expenseCurrency: string, amountPaid: Record<string, number>, amountSplit: Record<string, number>) {
     try {
         const res = await fetch(`${BASE_URL}/api/expenses/addexpense`, {
             credentials: "include",
             method: "POST",
-            headers: { "ContentType": "application/json" },
-            body: JSON.stringify(groupId)
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                groupId,
+
+
+            })
         })
         return res.json()
     } catch (error) {

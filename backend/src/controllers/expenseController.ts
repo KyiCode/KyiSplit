@@ -7,21 +7,33 @@ import { getExpenses, getGroupIdByExpense, getSplits } from '../utils/queries'
 
 export const addExpense = async (req: Request, res: Response) => {
     console.log("adding expense")
-    const { groupId, expenseName, expenseAmount, date } = req.body
+    const { groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, paidBy, splits } = req.body
+
+
     const user = req.user.userId
+
     try {
-        const amount = Number(expenseAmount)
+        const amount = Number(expenseTotal)
 
         if (!expenseName || !amount || amount <= 0) return res.status(400).json({ error: 'Invalid expense amount' })
         if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: 'User not in group or No such group' })
 
-        const currDate = date ? date : new Date().toISOString().split('T')[0];
+        const currDate = expenseDate ? expenseDate : new Date().toISOString().split('T')[0];
 
+        await database.query('BEGIN')
         // return expense id
         const result = await database.query(
             'INSERT INTO expenses (group_id, name, total, date) VALUES ($1, $2, $3, $4) RETURNING id',
             [groupId, expenseName, amount, currDate]
         )
+
+        const resultx = await database.query(
+            'INSERT INTO expenses (group_id, name, total, date, currency) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [groupId, expenseName, amount, currDate, CURRENCY]
+        )
+
+        await database.query('COMMIT')
+
         return res.status(201).json({ message: 'success' })
     } catch (error) {
         console.log(error)
@@ -139,7 +151,7 @@ export const getExpenseList = async (req: Request, res: Response) => {
             createdAt: e.created_at,
             currency: e.currency
         }))
-        return res.status(200).json({ status: "success", mappedExpenses})  //{expenseId: expenses.id, expenseName: expenses.name}
+        return res.status(200).json({ status: "success", mappedExpenses })  //{expenseId: expenses.id, expenseName: expenses.name}
     } catch (error) {
         console.log(error)
         return res.status(501).json({ error: 'Server error getting expenses' })

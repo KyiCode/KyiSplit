@@ -20,7 +20,7 @@ export async function createGroup(groupName: string, groupUserName: string) {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ groupName , groupUserName})
+            body: JSON.stringify({ groupName, groupUserName })
         })
         return res.json()
     } catch (error) {
@@ -80,7 +80,7 @@ export async function joinGroup(tokenId: string, userName: string) {
             credentials: "include",
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({userName})
+            body: JSON.stringify({ userName })
         })
         return res.json()
     } catch (error) {
@@ -89,3 +89,4 @@ export async function joinGroup(tokenId: string, userName: string) {
     }
 
 }
+

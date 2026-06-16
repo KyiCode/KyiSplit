@@ -1,17 +1,20 @@
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
-import DropDownForm from "../components/DropDownForm"
 import Modal from "../components/Modal"
 
-import type { Group, ExpenseType, Member, Payment, Split, GroupMemberType, CurrencyType } from '../interfaces/interface'
+import type { GroupMemberType, CurrencyType } from '../interfaces/interface'
 import CurrencyPicker from "../components/CurrencyPicker"
 import DatePicker from "../components/DatePicker"
 import { fetchGroupMembers } from "../api/groups";
+import { createExpense } from "../api/expenses"
 
 function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
     const { groupId } = useParams()
-    if (!groupId) console.log("addexpense no gid in params")
+    if (!groupId) {
+        console.log("addexpense no gid in params")
+        return
+    }
 
 
     const [groupMembers, setGroupMembers] = useState<GroupMemberType[]>([])
@@ -25,14 +28,13 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
     const [expenseCurrency, setExpenseCurrency] = useState<CurrencyType>()
     const [expenseDate, setExpenseDate] = useState("")
 
+
     const [hasCurrency, setHasCurrency] = useState(false)
 
     const navigate = useNavigate()
 
     const [isAssigningPayer, setIsAssigningPayer] = useState(false)
     const [isAssigningSplit, setIsAssigningSplit] = useState(false)
-
-
 
     useEffect(() => {
         if (isValidExpense() && hasCurrency) {
@@ -93,12 +95,12 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         return totalPaid == Number(expenseTotal) && totalSplit == Number(expenseTotal)
     }
 
-    function handleAddExpense() {
+    async function handleAddExpense() {
         if (isValidExpense() && isValidSplit()) {
-
+            const data = await createExpense(groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, amountPaid, amountSplit)
         }
     }
-    
+
     return (
         <>
             <h1>Add Expense</h1>
