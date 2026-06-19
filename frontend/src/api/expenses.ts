@@ -22,8 +22,12 @@ export async function createExpense(groupId: string, expenseName: string, expens
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 groupId,
-
-
+                expenseName,
+                expenseTotal,
+                expenseDate,
+                expenseCurrency,
+                paidBy: Object.entries(amountPaid).map(([userId, amount]) => ({ userId, amount })),
+                splits: Object.entries(amountSplit).map(([userId, amount]) => ({ userId, amount })),
             })
         })
         return res.json()

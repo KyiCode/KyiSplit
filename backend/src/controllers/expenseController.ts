@@ -7,37 +7,84 @@ import { getExpenses, getGroupIdByExpense, getSplits } from '../utils/queries'
 
 export const addExpense = async (req: Request, res: Response) => {
     console.log("adding expense")
-    const { groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, paidBy, splits } = req.body
-
-
     const user = req.user.userId
-
+    const { groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, paidBy, splits } = req.body
     try {
         const amount = Number(expenseTotal)
-
-        if (!expenseName || !amount || amount <= 0) return res.status(400).json({ error: 'Invalid expense amount' })
-        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: 'User not in group or No such group' })
+        if (!user || !groupId || !expenseDate || !expenseCurrency || !paidBy || !splits) return res.status(400).json({ status: "fail", message: "bad request" })
+        if (!expenseName || !amount || Number.isNaN(amount) || amount <= 0) return res.status(400).json({ status: "fail", message: 'Invalid expense amount' })
+        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: 'User not in group or No such group' })
 
         const currDate = expenseDate ? expenseDate : new Date().toISOString().split('T')[0];
 
+        for (const payer of paidBy) {
+            let user = payer.userId
+            let amount = Number(payer.amount)
+            if (!user || amount < 0) return res.status(400).json({ status: "fail", message: "empty user or invalid amount" })
+            if (!(await hasUser(user))) return res.status(400).json({ status: "fail", message: "no user" })
+            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: "user not in group" })
+        }
+
+        for (const payer of splits) {
+            let user = payer.userId
+            let amount = Number(payer.amount)
+            if (!user || amount < 0) return res.status(400).json({ status: "fail", message: "empty user or invalid amount" })
+            if (!(await hasUser(user))) return res.status(400).json({ status: "fail", message: "no user" })
+            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: "user not in group" })
+        }
+
+
+        const totalPaid = paidBy.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
+        const totalSplit = splits.reduce((sum: number, s: any) => sum + Number(s.amount), 0)
+
+        if (totalPaid !== amount || totalSplit !== amount) {
+            return res.status(400).json({ status: "fail", message: "Paid/split amounts don't match total" })
+        }
+
         await database.query('BEGIN')
         // return expense id
+
         const result = await database.query(
-            'INSERT INTO expenses (group_id, name, total, date) VALUES ($1, $2, $3, $4) RETURNING id',
-            [groupId, expenseName, amount, currDate]
+            'INSERT INTO expenses (group_id, name, total, date, currency) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+            [groupId, expenseName, amount, currDate, expenseCurrency]
         )
 
-        const resultx = await database.query(
-            'INSERT INTO expenses (group_id, name, total, date, currency) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [groupId, expenseName, amount, currDate, CURRENCY]
-        )
+        const expenseId = result.rows[0].id
+
+        for (const payer of paidBy) {
+            let user = payer.userId
+            let amount = Number(payer.amount)
+            if (amount == 0) continue
+
+            await database.query(
+                `INSERT INTO payments (expense_id, user_id, amount) VALUES ($1, $2, $3)
+                ON CONFLICT (expense_id, user_id)
+                DO UPDATE SET amount = EXCLUDED.amount`,
+                [expenseId, user, amount]
+            )
+            console.log(`Added payer: ${user} amount:${amount}`)
+        }
+
+        for (const asignee of splits) {
+            let user = asignee.userId
+            let amount = Number(asignee.amount)
+            if (amount == 0) continue
+
+            await database.query(
+                `INSERT INTO splits (expense_id, user_id, amount) VALUES ($1, $2, $3)
+                ON CONFLICT (expense_id, user_id)
+                DO UPDATE SET amount = EXCLUDED.amount`,
+                [expenseId, user, amount]
+            )
+            console.log(`Added assignee: ${user} amount:${amount}`)
+        }
 
         await database.query('COMMIT')
 
-        return res.status(201).json({ message: 'success' })
+        return res.status(201).json({ status: 'success' })
     } catch (error) {
         console.log(error)
-        return res.status(501).json({ error: 'Server error adding expense' })
+        return res.status(501).json({ status: "fail", message: 'Server error adding expense' })
     }
 }
 

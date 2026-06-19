@@ -89,15 +89,19 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
         }));
     };
 
-    function isValidSplit() {
-        const totalPaid = Object.values(amountPaid).reduce((sum, val) => sum + val)
-        const totalSplit = Object.values(amountSplit).reduce((sum, val) => sum + val)
-        return totalPaid == Number(expenseTotal) && totalSplit == Number(expenseTotal)
-    }
+
+    const [hasError, setHasError] = useState(false)
+    const [errorMessage, setErrorMessage] = useState("")
 
     async function handleAddExpense() {
-        if (isValidExpense() && isValidSplit()) {
-            const data = await createExpense(groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, amountPaid, amountSplit)
+        const data = await createExpense(groupId!, expenseName, expenseTotal, expenseDate, expenseCurrency!.currencyIso, amountPaid, amountSplit)
+        console.log(data)
+        if (data.status == "success") {
+            navigate(`/group/${groupId}`)
+        } else {
+            setErrorMessage(data.message)
+            setHasError(true)
+            setTimeout(() => { setHasError(false) }, 3000)
         }
     }
 
@@ -126,53 +130,35 @@ function AddExpensePage() {  // BackEnd have to somehow pass groupdetails
                 </Modal>
             )}
 
-            {/* <CurrencyPicker></CurrencyPicker> */}
-
-            {/* <h2>
-                <input type="text" value={expenseCurrency ?? ""} onChange={(e) => setExpenseDate(e.target.value)} placeholder="Enter currency" />
-            </h2> */}
-
-
             {hasExpense &&
                 <>
                     <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
                     {isAssigningPayer &&
-                        // <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
-                        // <DropDownForm groupId={groupId!} />
                         <div>
+                            console.log("groupMembers:", groupMembers)
                             {groupMembers.map(member =>
                                 <div>
                                     {member.userGroupName} <input type="number" value={amountPaid[member.userId]} onChange={(e) => handleAmountPaidChange(member.userId, e.target.value)} placeholder=" amount"></input>
-                                    {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
                                 </div>)}
-                            {/* < button onClick={() => handleDone()}>Done</button> */}
                         </div >
                     }
-                </>
-            }
 
-            {hasExpense &&
-                <>
-                    <button onClick={() => setIsAssigningPayer(!isAssigningPayer)}>Assign payer</button>
-                    {isAssigningPayer &&
-                        // <DropDownForm groupId={groupId!} assignPayer={handleAssignPayer} />
-                        // <DropDownForm groupId={groupId!} />
+                    <button onClick={() => setIsAssigningSplit(!isAssigningSplit)}>Assign split</button>
+                    {isAssigningSplit &&
                         <div>
                             {groupMembers.map(member =>
                                 <div>
-                                    {member.userGroupName} <input type="number" value={amountPaid[member.userId]} onChange={(e) => handleAmountSplitChange(member.userId, e.target.value)} placeholder=" amount"></input>
-                                    {/* <input placeholder="0" onChange={(e) => handleAmountChange(member.memberName, e.target.value)} ></input> */}
+                                    {member.userGroupName} <input type="number" value={amountSplit[member.userId]} onChange={(e) => handleAmountSplitChange(member.userId, e.target.value)} placeholder=" amount"></input>
                                 </div>)}
-                            {/* < button onClick={() => handleDone()}>Done</button> */}
                         </div >
                     }
+
+                    <button onClick={() => handleAddExpense()}>Add Expense</button>
                 </>
+
             }
 
-            {
-                hasExpense &&
-                <button onClick={() => handleAddExpense()}>Add Expense</button>
-            }
+            {hasError && <div>{errorMessage}</div>}
         </>
     )
 
