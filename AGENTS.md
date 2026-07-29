@@ -1,60 +1,52 @@
 # KyiSplit Agent Guide
 
-## Agent
-- Do not assume, do not hallucinate. Clarify
-- Behaviour changes done TDD.
+## Instruction Sources
 
-## Workflow
+- This file defines repository-wide working rules.
+- [`roadmap/PLANNING_GUIDE.md`](roadmap/PLANNING_GUIDE.md) defines roadmap
+  structure and planning workflow.
+- [`roadmap/README.md`](roadmap/README.md) defines release scope, product
+  decisions, phase order, and phase status.
+- The active phase `README.md` defines phase scope and exit criteria. Its
+  `CURRENT_TASK.md` identifies the task whose file defines the task-specific
+  acceptance criteria and verification.
+- If these sources conflict, stop and tell the developer which statements
+  conflict. Do not choose, merge, or edit the conflicting instructions; the
+  developer resolves them manually.
 
-- Follow [`roadmap/README.md`](roadmap/README.md) toward the private-friends
-  release, working through phases in order unless the user changes priority.
-- Before work, read [`roadmap/CURRENT_PHASE.md`](roadmap/CURRENT_PHASE.md),
-  its matching `roadmap/phaseXX-*.md`, and
-  [`roadmap/acceptance-checklist.md`](roadmap/acceptance-checklist.md) before
-  implementing.
+## Before Work
+
+- Inspect the relevant code and documentation before editing.
+- Ask when missing information would materially change the solution.
 - Preserve unrelated working-tree changes. Keep changes and commits scoped to
-  one coherent roadmap task.
-- Update the phase pointer and roadmap status together, and only after the
-  phase exit criteria and relevant acceptance checks pass.
-- Within each phase, update completed task with (done) at the front.
+  one task.
+- For roadmap planning or implementation, follow
+  [`roadmap/PLANNING_GUIDE.md`](roadmap/PLANNING_GUIDE.md) and read
+  [`roadmap/README.md`](roadmap/README.md).
+- Before roadmap implementation, read the single phase marked `In progress`,
+  its `CURRENT_TASK.md`, and the linked task file. If exactly one phase is not
+  active, stop and inform the developer.
 
-## Project Invariants
+## Implementation
 
 - Never commit secrets.
-- Treat [`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) as context
-  only; make database changes through versioned migrations, never undocumented
-  production-only Supabase dashboard edits.
-- Preserve custom Express authentication unless the roadmap is explicitly
-  revised. Do not introduce Supabase Auth or direct browser-to-database access.
-- Keep the frontend and API compatible with a same-origin production
-  deployment.
-- Use strict TypeScript and avoid `any` in new production code.
-- Validate all input at the API boundary and enforce critical invariants again
-  in PostgreSQL.
-- Represent money in API payloads as decimal strings. Do not use direct
-  floating-point equality for monetary validation.
-- Use a checked-out PostgreSQL client for multi-statement transactions and
-  always roll back and release it on failure.
-- Require group membership on every group-scoped read or mutation.
-- Return the shared API envelope documented in
-  [`roadmap/phase02-data-api-foundation.md`](roadmap/phase02-data-api-foundation.md).
-- Add or update tests with every behavioral change.
+- Treat [`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) as a
+  reference, not a migration.
+- Use TDD for behavioral changes: write a failing test, implement the smallest
+  fix, then refactor.
+- Keep frontend and backend API contracts aligned.
 
 ## Verification
 
-Run the checks relevant to the touched subsystem before reporting completion:
+Run the relevant checks before reporting completion:
 
 ```powershell
-cd backend
-npm.cmd test
+npm.cmd --prefix backend test
 ```
 
 ```powershell
-cd frontend
-npm.cmd run lint
-npm.cmd run build
+npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run build
 ```
 
-When database or end-to-end infrastructure exists, also run the migration
-validation and end-to-end commands documented by that phase. Report checks that
-could not run and the exact blocker.
+Also run any phase-specific checks. Report commands that could not run and why.

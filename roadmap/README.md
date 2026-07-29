@@ -7,9 +7,10 @@ for a private group of friends. The release must support secure account access,
 groups and reusable invitations, multi-payer expenses, deterministic
 multi-currency balances, and recorded repayments.
 
-This roadmap is implementation-oriented. Each numbered phase defines its own
-requirements, tests, and exit criteria. Later phases depend on the contracts and
-invariants established by earlier ones.
+This roadmap is implementation-oriented. Phases are planned in detail one at a
+time according to [`PLANNING_GUIDE.md`](PLANNING_GUIDE.md). When planned, each
+phase defines its own requirements, tests, and exit criteria. Later phases
+depend on the contracts and invariants established by earlier ones.
 
 ## Verified Starting Point
 
@@ -22,12 +23,12 @@ As inspected on 2026-07-29:
 - The frontend uses React 19, React Router, TypeScript, and Vite.
 - Authentication, groups, invitations, expense creation, exchange-rate lookup,
   and settlement calculation exist in partial form.
-- `npm.cmd test` passes 30 backend tests across five test files.
-- `npm.cmd run lint` and `npm.cmd run build` pass in the frontend.
+- `npm.cmd --prefix backend test` passes 30 backend tests across five test
+  files.
+- `npm.cmd --prefix frontend run lint` and
+  `npm.cmd --prefix frontend run build` pass.
 - There is no checked-in migration history, frontend test suite, end-to-end
-  suite, production packaging, or useful project README.
-- The working tree contains substantial user changes. Roadmap work must preserve
-  them.
+  suite, or production packaging.
 
 ## Product Decisions
 
@@ -47,18 +48,20 @@ As inspected on 2026-07-29:
 
 | Phase | Outcome | Status |
 | --- | --- | --- |
-| [01 — Stabilize Core](01-stabilize-core.md) | Current flows are secure, transactional, and predictable | Not started |
-| [02 — Data and API Foundation](02-data-api-foundation.md) | Migrations, constraints, contracts, FX, and settlements are authoritative | Not started |
-| [03 — Complete Product](03-complete-product.md) | Full browser workflow from signup through repayment | Not started |
-| [04 — Release Operations](04-release-operations.md) | Tested, documented, same-origin production artifact | Not started |
+| 01 — Stabilize Core | Current flows are secure, transactional, and predictable | Not started |
+| 02 — Data and API Foundation | Migrations, constraints, contracts, FX, and settlements are authoritative | Not started |
+| 03 — Complete Product | Full browser workflow from signup through repayment | Not started |
+| 04 — Release Operations | Tested, documented, same-origin production artifact | Not started |
 
 Work on one phase at a time. A phase may be marked complete only after all of
 its exit criteria pass. When implementation reveals a necessary change to a
 later phase, update the affected roadmap file in the same change and explain
 why.
 
+No phase is currently active. Plan Phase 01 according to `PLANNING_GUIDE.md`
+before beginning roadmap implementation.
+
 ## Release Definition
 
-The roadmap is complete only when every item in
-[`acceptance-checklist.md`](acceptance-checklist.md) is checked and the
-production-like same-origin build passes its smoke test.
+The roadmap is complete only when every phase is complete, all phase exit
+criteria pass, and the production-like same-origin build passes its smoke test.
