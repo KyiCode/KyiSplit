@@ -1,29 +1,31 @@
-import { useState } from "react"
-
-import type { Group, ExpenseType, Member, Payment, Split } from '../interfaces/interface'
-
-
-
-function DropDown() {
-    const [isOpen, setIsOpen] = useState(false)
-}
-
-
+import type { ExpenseType } from '../interfaces/interface'
 
 function ExpenseBox({ expense }: { expense: ExpenseType }) {
-    const [isAssigningPayee, setIsAssigningPayee] = useState(false)
-    const [isAssigningSplits, setIsAssigningSplits] = useState(false)
+    const amount = new Intl.NumberFormat("en", {
+        style: "currency",
+        currency: expense.currency || "SGD"
+    }).format(Number(expense.expenseTotal))
+    const date = new Intl.DateTimeFormat("en", {
+        day: "numeric",
+        month: "short"
+    }).format(new Date(expense.date))
+    const [day, month] = date.split(" ")
 
     return (
-        <div>
-            <h2>{expense.expenseName}</h2>
-            <h3> total (${Number(expense.expenseTotal).toFixed(2)})</h3>
-            {/* <div> Paid By: {expense.paidBy.map(payment => `${payment.memberName} ($${payment.amount})`).join(", ")} </div>
-            <div> Splits: {expense.splits.map(split => `${split.memberName} ($${split.amount})`).join(", ")} </div> */}
-            <h2> . </h2>
-            <h2> . </h2>
-
-        </div>
+        <article className="expense-row">
+            <div className="expense-date">
+                <span>{month}</span>
+                <strong>{day}</strong>
+            </div>
+            <div className="expense-copy">
+                <strong>{expense.expenseName}</strong>
+                <small>Shared expense</small>
+            </div>
+            <div className="expense-amount">
+                <strong>{amount}</strong>
+                <small>{expense.currency || "SGD"}</small>
+            </div>
+        </article>
     )
 }
 

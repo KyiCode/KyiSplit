@@ -1,12 +1,7 @@
-export interface Member {
-    memberName: string
-    memberEmail: string
-}
-
 export interface Group {
     groupId: string,
     groupName: string
-    groupMembers: Member[]
+    groupMembers: GroupMemberType[]
 }
 
 // interfaces/interface.ts
@@ -26,7 +21,7 @@ export interface CurrencyType {
 }
 
 export interface ExpenseMemberAmount {
-    memberName: string
+    userId: string
     amount: number
 }
 
@@ -35,16 +30,5 @@ export interface GroupMemberType {
     userGroupName: string
 }
 
-export interface Payment extends ExpenseMemberAmount {
-
-}
-
-export interface Split extends ExpenseMemberAmount {
-}
-
-
-
-// export interface ExpenseBoxProp {
-//     expense: Expense
-//     handleDelete: (expense: Expense) => void
-// }
+export type Payment = ExpenseMemberAmount
+export type Split = ExpenseMemberAmount

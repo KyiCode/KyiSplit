@@ -1,110 +1,136 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import type { Group, ExpenseType, Member, Payment, Split } from '../interfaces/interface'
 import ExpenseBox from "../components/ExpenseBox"
+import PageShell from "../components/PageShell"
 import { fetchExpenses } from "../api/expenses"
-import { fetchGroup, generateInvite } from "../api/groups"
+import { fetchGroup, fetchGroupMembers, generateInvite } from "../api/groups"
+import type { ExpenseType, GroupMemberType } from "../interfaces/interface"
 
 function GroupPage() {
     const [expenses, setExpenses] = useState<ExpenseType[]>([])
-    const { groupId } = useParams()
-
+    const [members, setMembers] = useState<GroupMemberType[]>([])
     const [groupName, setGroupName] = useState("")
-    const [expenseName, setExpenseName] = useState("")
-    const [expenseTotal, setExpenseTotal] = useState("")
-    const [hasUserName, setHasUserName] = useState(false)
-
-    const [isInvite, setIsInvite] = useState(false)
-
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState("")
+    const [inviteLink, setInviteLink] = useState("")
+    const [inviteLoading, setInviteLoading] = useState(false)
+    const [copied, setCopied] = useState(false)
+    const { groupId } = useParams()
     const navigate = useNavigate()
 
     useEffect(() => {
-        console.log("GGGG")
-        if (groupId) {
-            getGroup()
-            // getUserName()
-            getExpense()
-        }
+        if (!groupId) return
+        let active = true
+
+        Promise.all([
+            fetchGroup(groupId),
+            fetchExpenses(groupId),
+            fetchGroupMembers(groupId)
+        ]).then(([groupData, expenseData, memberData]) => {
+            if (!active) return
+            if (groupData.status === "success") setGroupName(groupData.groupName)
+            else setError(groupData.message || "Unable to open this group.")
+            if (expenseData.status === "success") setExpenses(expenseData.mappedExpenses)
+            if (Array.isArray(memberData)) setMembers(memberData)
+        }).catch(() => active && setError("We couldn't load this group."))
+            .finally(() => active && setLoading(false))
+
+        return () => { active = false }
     }, [groupId])
 
-    async function getGroup() {
-        const data = await fetchGroup(groupId!)
-        if (data.status == "success") {
-            setGroupName(data.groupName)
-        }
-    }
-
-    // async function getUserName() {
-    //     const data = await fetchUserName(groupId!)
-    //     if (data.status == "success") {
-    //         setHasUserName(true)
-    //     }
-    // }
-
-    async function getExpense() {
-        const data = await fetchExpenses(groupId!)
-        if (data.status == "success") {
-            setExpenses(data.mappedExpenses)
-        }
-    }
-
-    function handleExitGroup() {
-        navigate("/")
-    }
-
-    function handleAddExpense() {
-        // if (newExpense.expenseName == "" || newExpense.expenseTotal < 0) return
-        setExpenseName("")
-        setExpenseTotal("")
-        // setExpenses([...expenses, newExpense])
-    }
-
-    function handleDeleteExpense(expense: ExpenseType) {
-        setExpenses(expenses.filter(e => e.expenseName != expense.expenseName))
-    }
-
-    const [inviteLink, setInviteLink] = useState("")
     async function handleInvite() {
-        setIsInvite(true)
-        const data = await generateInvite(groupId!)
-        if (!data) console.log("invite link generator failed")
-        setInviteLink(data.inviteToken)
+        if (!groupId) return
+        setInviteLoading(true)
+        setError("")
+        try {
+            const data = await generateInvite(groupId)
+            if (data.status === "success") setInviteLink(data.inviteToken)
+            else setError(data.message || "Unable to create an invite.")
+        } catch {
+            setError("Unable to create an invite right now.")
+        } finally {
+            setInviteLoading(false)
+        }
     }
 
-
+    async function copyInvite() {
+        await navigator.clipboard.writeText(inviteLink)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1800)
+    }
 
     return (
-        <div>
+        <PageShell action={<button className="button ghost compact" onClick={() => navigate("/")}>← Groups</button>}>
+            <section className="group-hero">
+                <div className="group-title-block">
+                    <span className="eyebrow">Shared group</span>
+                    <h1>{loading ? "Loading…" : groupName || "Untitled group"}</h1>
+                    <div className="group-meta">
+                        <span>{members.length} {members.length === 1 ? "member" : "members"}</span>
+                        <span className="meta-divider" />
+                        <span>{expenses.length} {expenses.length === 1 ? "expense" : "expenses"}</span>
+                    </div>
+                </div>
+                <div className="group-actions">
+                    <button className="button secondary" onClick={handleInvite} disabled={inviteLoading}>
+                        {inviteLoading ? "Creating…" : "Invite people"}
+                    </button>
+                    <button className="button primary" onClick={() => navigate(`/group/${groupId}/addexpense`)}>
+                        <span>＋</span> Add expense
+                    </button>
+                </div>
+            </section>
 
-            <h1>Group Page  <button onClick={() => handleExitGroup()}> Exit group</button></h1>
+            {error && <div className="notice error">{error}</div>}
 
-            <h1>{groupName}</h1>
+            {inviteLink && (
+                <section className="invite-banner">
+                    <div>
+                        <span className="eyebrow">Invite ready</span>
+                        <p>{inviteLink}</p>
+                    </div>
+                    <button className="button secondary compact" onClick={copyInvite}>{copied ? "Copied!" : "Copy link"}</button>
+                    <button className="icon-button subtle" onClick={() => setInviteLink("")} aria-label="Close invite">×</button>
+                </section>
+            )}
 
-
-
-            <>
-                {!isInvite && <button onClick={() => handleInvite()}>Invite users</button>}
-                {isInvite && <>
-                    <div>invite link: </div>
-                    <div>{inviteLink}</div>
-                    <button onClick={() => setIsInvite(false)}> X </button>
-                </>}
-
-                {/* {group.groupMembers.map(member => (<div> {member.memberName} </div>))} */}
-
-                {
-                    expenses.map(expense => (
+            <section className="group-layout">
+                <div className="expense-panel">
+                    <div className="section-heading">
                         <div>
-
-                            {/* <ExpenseBox key={expense.expenseName} expense={expense} handleDelete={handleDeleteExpense} /> */}
-                            <ExpenseBox key={expense.expenseName} expense={expense} />
+                            <span className="eyebrow">Activity</span>
+                            <h2>Recent expenses</h2>
                         </div>
-                    ))
-                }
-                <button onClick={() => navigate(`/${groupId}/addexpense`)}> Add Expense</button>
-            </>
+                    </div>
+                    {loading ? (
+                        <div className="skeleton-list"><span /><span /><span /></div>
+                    ) : expenses.length > 0 ? (
+                        <div className="expense-list">
+                            {expenses.map(expense => <ExpenseBox key={expense.expenseId} expense={expense} />)}
+                        </div>
+                    ) : (
+                        <div className="empty-state compact-empty">
+                            <span className="empty-mark">+</span>
+                            <h3>Nothing split yet</h3>
+                            <p>Add the first expense and KyiSplit will keep the maths tidy.</p>
+                        </div>
+                    )}
+                </div>
 
-        </div >
+                <aside className="members-panel">
+                    <span className="eyebrow">People</span>
+                    <h2>In this group</h2>
+                    <div className="people-list">
+                        {members.map(member => (
+                            <div className="person-row" key={member.userId}>
+                                <span className="person-avatar">{member.userGroupName.slice(0, 1).toUpperCase()}</span>
+                                <strong>{member.userGroupName}</strong>
+                            </div>
+                        ))}
+                    </div>
+                </aside>
+            </section>
+        </PageShell>
     )
 }
 

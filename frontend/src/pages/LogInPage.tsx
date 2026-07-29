@@ -1,51 +1,62 @@
-import { useNavigate } from "react-router-dom"
-import { useState } from "react"
-import PasswordInput from "../components/PasswordInput"
+import { useState, type FormEvent } from "react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import Brand from "../components/Brand"
 import EmailInput from "../components/EmailInput"
-
+import PasswordInput from "../components/PasswordInput"
 import { logIn } from "../api/auth"
 
 function LogInPage() {
     const navigate = useNavigate()
+    const location = useLocation()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [logInFail, setLogInFail] = useState(false)
-    const [errorMessage, setErrorMessage] = useState()
+    const [errorMessage, setErrorMessage] = useState("")
+    const [submitting, setSubmitting] = useState(false)
 
-    async function handleSubmit() {
-        const data = await logIn(email, password)
-        console.log(`log in: ${data}`)
-        if (data.status === "success") {
-            const pendingInvite = localStorage.getItem("pendingInvite")
-            if (pendingInvite) {
-                localStorage.removeItem("pendingInvite")
-                navigate(`/join/${pendingInvite}`)
+    async function handleSubmit(event: FormEvent) {
+        event.preventDefault()
+        setSubmitting(true)
+        setErrorMessage("")
+        try {
+            const data = await logIn(email, password)
+            if (data.status === "success") {
+                const pendingInvite = localStorage.getItem("pendingInvite")
+                if (pendingInvite) {
+                    localStorage.removeItem("pendingInvite")
+                    navigate(`/join/${pendingInvite}`)
+                } else {
+                    const requestedPath = (location.state as { from?: string } | null)?.from
+                    navigate(requestedPath || "/")
+                }
             } else {
-                navigate("/")
+                setErrorMessage(data.message || "Incorrect email or password.")
             }
-
-        } else {
-            setLogInFail(true)
-            setErrorMessage(data.message)
+        } catch {
+            setErrorMessage("Unable to sign in right now.")
+        } finally {
+            setSubmitting(false)
         }
     }
 
     return (
-        <div>
-            <h1>Log In Page</h1>
-
-            <div>
+        <main className="minimal-auth-shell">
+            <div className="minimal-auth-top">
+                <Brand />
+            </div>
+            <form className="minimal-auth-card" onSubmit={handleSubmit}>
+                <header>
+                    <h1>Sign in</h1>
+                    <p>Enter your details to continue.</p>
+                </header>
                 <EmailInput value={email} onChange={setEmail} />
                 <PasswordInput value={password} onChange={setPassword} />
-
-                <button onClick={() => handleSubmit()}>Submit</button>
-            </div>
-            {logInFail && <p> Log in failed! {errorMessage} </p>}
-
-            <p> Do not have an account?</p>
-            <button onClick={() => navigate("/signup")}> Sign Up</button>
-        </div>
-
+                {errorMessage && <div className="notice error small">{errorMessage}</div>}
+                <button className="button primary full" disabled={!email || !password || submitting}>
+                    {submitting ? "Signing in…" : "Sign in"}
+                </button>
+                <p className="auth-switch">No account? <Link to="/signup">Create one</Link></p>
+            </form>
+        </main>
     )
 }
 

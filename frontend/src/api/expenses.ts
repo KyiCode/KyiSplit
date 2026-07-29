@@ -14,7 +14,7 @@ export async function fetchExpenses(groupId: string) {
 }
 
 export async function createExpense(groupId: string, expenseName: string, expenseTotal: string,
-    expenseDate: string, expenseCurrency: string, amountPaid: Record<string, number>, amountSplit: Record<string, number>) {
+    expenseDate: string, expenseCurrency: string, amountPaid: Record<string, string | number>, amountSplit: Record<string, string | number>) {
     try {
         const res = await fetch(`${BASE_URL}/api/expenses/addexpense`, {
             credentials: "include",
@@ -26,8 +26,8 @@ export async function createExpense(groupId: string, expenseName: string, expens
                 expenseTotal,
                 expenseDate,
                 expenseCurrency,
-                paidBy: Object.entries(amountPaid).map(([userId, amount]) => ({ userId, amount })),
-                splits: Object.entries(amountSplit).map(([userId, amount]) => ({ userId, amount })),
+                paidBy: Object.entries(amountPaid).map(([userId, amount]) => ({ userId, amount: Number(amount) })),
+                splits: Object.entries(amountSplit).map(([userId, amount]) => ({ userId, amount: Number(amount) })),
             })
         })
         return res.json()

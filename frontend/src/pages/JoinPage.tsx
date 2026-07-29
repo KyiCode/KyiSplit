@@ -1,104 +1,81 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { joinGroup } from "../api/groups";
-import { verifySession } from "../api/auth";
+import { useEffect, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import Brand from "../components/Brand"
+import { joinGroup } from "../api/groups"
+import { verifySession } from "../api/auth"
 
 function JoinPage() {
-    const { inviteToken } = useParams();
-    const navigate = useNavigate();
-
-    const [userName, setUserName] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
-
-
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+    const { inviteToken } = useParams()
+    const navigate = useNavigate()
+    const [userName, setUserName] = useState("")
+    const [errorMessage, setErrorMessage] = useState("")
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null)
+    const [joining, setJoining] = useState(false)
 
     useEffect(() => {
-        checkLogin();
-    }, [inviteToken]);
-
-    async function checkLogin() {
-        const data = await verifySession(); // backend checks JWT cookie
-
-        if (data.status === "success") {
-            setIsLoggedIn(true);
-        } else {
-            setIsLoggedIn(false);
-        }
-    }
+        let active = true
+        verifySession()
+            .then(data => active && setIsLoggedIn(data.status === "success"))
+            .catch(() => active && setIsLoggedIn(false))
+        return () => { active = false }
+    }, [inviteToken])
 
     async function handleJoin() {
         if (!inviteToken) {
-            setErrorMessage("Invalid invite link");
-            return;
+            setErrorMessage("This invite link is incomplete.")
+            return
         }
-
-        const data = await joinGroup(inviteToken, userName);
-
-        if (data.status === "success") {
-            navigate(`/group/${data.groupId}`);
-        } else {
-            setErrorMessage(data.message);
-            setTimeout(() => navigate('/'), 2000)
+        setJoining(true)
+        try {
+            const data = await joinGroup(inviteToken, userName)
+            if (data.status === "success") navigate(`/group/${data.groupId}`)
+            else setErrorMessage(data.message || "This invite could not be accepted.")
+        } catch {
+            setErrorMessage("Unable to join this group right now.")
+        } finally {
+            setJoining(false)
         }
     }
 
-    const handleLogin = () => {
-        localStorage.setItem("pendingInvite", inviteToken!);
-        navigate("/login");
-    };
-
-    const handleSignUp = () => {
-        localStorage.setItem("pendingInvite", inviteToken!);
-        navigate("/signup");
-    };
-
-    if (isLoggedIn === null) {
-        return <p>Loading...</p>;
+    function continueTo(path: "/auth" | "/signup") {
+        localStorage.setItem("pendingInvite", inviteToken || "")
+        navigate(path)
     }
 
     return (
-        <div>
+        <main className="join-shell">
+            <Brand />
+            <section className="join-card">
+                <span className="eyebrow">You’re invited</span>
+                <h1>Come split the tab.</h1>
+                <p className="join-intro">A friend invited you to a KyiSplit group. Join to see shared expenses and add your own.</p>
 
-            {isLoggedIn &&
-                <>
-                    <h1>Join Group</h1>
+                {isLoggedIn === null && <div className="join-loading">Checking your account…</div>}
 
-                    <p>Choose your name in this group</p>
-
-                    <input
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        placeholder="e.g. John"
-                    />
-
-                    <button
-                        disabled={userName.trim() === ""}
-                        onClick={handleJoin}
-                    >
-                        Join Group
-                    </button>
-                </>
-            }
-            {errorMessage && <p>{errorMessage}</p>}
-
-            <hr />
-
-            {!isLoggedIn &&
-                <>
-                    <div>
-                        <h2>Have an account?</h2>
-                        <button onClick={handleLogin}>Log In</button>
+                {isLoggedIn && (
+                    <div className="join-form">
+                        <label className="field">
+                            <span>Your name in this group</span>
+                            <input value={userName} onChange={event => setUserName(event.target.value)} placeholder="What should friends call you?" />
+                        </label>
+                        <button className="button primary full large" disabled={!userName.trim() || joining} onClick={handleJoin}>
+                            {joining ? "Joining…" : "Join group"}
+                        </button>
                     </div>
+                )}
 
-                    <div>
-                        <h2>No account?</h2>
-                        <button onClick={handleSignUp}>Sign Up</button>
+                {isLoggedIn === false && (
+                    <div className="join-actions">
+                        <button className="button primary full large" onClick={() => continueTo("/auth")}>Sign in to join</button>
+                        <button className="button secondary full" onClick={() => continueTo("/signup")}>Create an account</button>
                     </div>
+                )}
 
-                </>}
-        </div>
-    );
+                {errorMessage && <div className="notice error small">{errorMessage}</div>}
+                <small className="privacy-note">Only group members can see shared expenses.</small>
+            </section>
+        </main>
+    )
 }
 
-export default JoinPage;
+export default JoinPage

@@ -1,17 +1,18 @@
 import type { CurrencyType } from "../interfaces/interface"
 
-export async function fetchCurrencies() {
+type FrankfurterCurrency = {
+    iso_code: string
+    name: string
+}
+
+export async function fetchCurrencies(): Promise<CurrencyType[]> {
     const res = await fetch("https://api.frankfurter.dev/v2/currencies")
 
-    if (!res) {
-        console.log("Error fetching currency from api")
-        return
-    }
-    const currencies = await res.json()
-    const result = currencies.map((currency: any) => ({
+    if (!res.ok) throw new Error("Unable to load currencies")
+
+    const currencies = await res.json() as FrankfurterCurrency[]
+    return currencies.map((currency) => ({
         currencyIso: currency.iso_code,
         currencyName: currency.name
     }))
-
-    return result
-} 
+}

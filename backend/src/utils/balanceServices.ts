@@ -3,12 +3,12 @@ import { hasInvalidExpenses } from "../utils/validators"
 import { convertCurrency } from "../utils/currencyServices"
 import { MaxPriorityQueue } from '@datastructures-js/priority-queue';
 
-function initialiseMappings(usersInGroup: string[]) {
+export function initialiseMappings(usersInGroup: string[]) {
     const newMap = new Map<string, number>()
     usersInGroup.forEach(userId => { newMap.set(userId, 0) })
     return newMap
 }
-function populateMap(usersInGroup: string[], paidBills: { user_id: string, amount: number }[], splitBills: { user_id: string, amount: number }[]) {
+export function populateMap(usersInGroup: string[], paidBills: { user_id: string, amount: number }[], splitBills: { user_id: string, amount: number }[]) {
     const payerBillMap = initialiseMappings(usersInGroup)
     const owerBillMap = initialiseMappings(usersInGroup)
     paidBills.forEach(bill => {
@@ -22,7 +22,7 @@ function populateMap(usersInGroup: string[], paidBills: { user_id: string, amoun
     return { payerBillMap, owerBillMap }
 }
 
-function populateHeap(usersInGroup: string[], paidMappings: Map<string, number>, splitMappings: Map<string, number>) {
+export function populateHeap(usersInGroup: string[], paidMappings: Map<string, number>, splitMappings: Map<string, number>) {
     const usersNet = new Map<string, number>()
     usersInGroup.forEach(user => usersNet.set(user, paidMappings.get(user)! - splitMappings.get(user)!))
 
@@ -38,7 +38,7 @@ function populateHeap(usersInGroup: string[], paidMappings: Map<string, number>,
     return { receiverHeap, owerHeap }
 }
 
-function computeLeastTransactions(receiverHeap: MaxPriorityQueue<{ userId: string, amount: number }>, owerHeap: MaxPriorityQueue<{ userId: string, amount: number }>) {
+export function computeLeastTransactions(receiverHeap: MaxPriorityQueue<{ userId: string, amount: number }>, owerHeap: MaxPriorityQueue<{ userId: string, amount: number }>) {
     const transactions: { payingUserId: string, receivingUserId: string, amount: number }[] = []
     while (true) {
         const paying = owerHeap.pop()

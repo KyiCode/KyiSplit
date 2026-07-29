@@ -1,26 +1,18 @@
-// components/Modal.tsx
-function Modal({ onClose, children }: { onClose: () => void, children: React.ReactNode }) {
+import type { MouseEvent, ReactNode } from "react"
+
+function Modal({ onClose, children }: { onClose: () => void, children: ReactNode }) {
+    function closeFromBackdrop(event: MouseEvent<HTMLDivElement>) {
+        if (event.target === event.currentTarget) onClose()
+    }
+
     return (
-        <div style={{
-            position: "fixed",
-            top: 0, left: 0,
-            width: "100vw", height: "100vh",
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000
-        }}>
-            <div style={{
-                backgroundColor: "white",
-                padding: "2rem",
-                borderRadius: "8px",
-                minWidth: "300px"
-            }}>
-                <button onClick={onClose}>✕</button>
+        <div className="modal-backdrop" role="presentation" onMouseDown={closeFromBackdrop}>
+            <div className="modal-card" role="dialog" aria-modal="true">
+                <button className="icon-button modal-close" onClick={onClose} aria-label="Close">×</button>
                 {children}
             </div>
         </div>
     )
 }
+
 export default Modal
