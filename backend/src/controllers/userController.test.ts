@@ -23,7 +23,22 @@ vi.mock("../utils/queries", () => ({
     getUser: vi.fn()
 }))
 
+vi.mock("../config", () => ({
+    readAuthConfig: vi.fn(() => ({
+        bcryptCost: 10,
+        isProduction: false,
+        jwtKey: "test-key"
+    }))
+}))
+
 vi.mock("../utils/tokenGenerator", () => ({
+    clearSessionCookie: vi.fn((response: Response) => {
+        response.clearCookie("jwt", {
+            httpOnly: true,
+            sameSite: "strict",
+            secure: false
+        })
+    }),
     default: vi.fn()
 }))
 
@@ -32,7 +47,7 @@ import database from "../db"
 import { getUser } from "../utils/queries"
 import generateToken from "../utils/tokenGenerator"
 import { hasAccount } from "../utils/validators"
-import { login, signup, verifySession } from "./userController"
+import { login, logout, signup, verifySession } from "./userController"
 
 const accountMock = vi.mocked(hasAccount)
 const compareMock = vi.mocked(bcrypt.compare) as unknown as ReturnType<
@@ -47,6 +62,7 @@ const tokenMock = vi.mocked(generateToken)
 
 function createResponse() {
     const response = {
+        clearCookie: vi.fn(),
         json: vi.fn(),
         status: vi.fn()
     }
@@ -66,31 +82,36 @@ beforeEach(() => {
 })
 
 describe("user controller", () => {
-    it("rejects sign-up when credentials are missing", async () => {
+    it("rejects sign-up when credentials are invalid", async () => {
         const request = createRequest({ email: "" })
         const response = createResponse()
 
         await signup(request, response)
 
+        expect(response.status).toHaveBeenCalledWith(400)
         expect(response.json).toHaveBeenCalledWith({
             status: "fail",
+            code: "VALIDATION_ERROR",
             message: "Invalid email or password"
         })
         expect(queryMock).not.toHaveBeenCalled()
     })
 
-    it("rejects sign-up for an existing account", async () => {
+    it("normalizes credentials and rejects an existing account", async () => {
         accountMock.mockResolvedValue(true)
         const request = createRequest({
-            email: "person@example.com",
-            password: "secret"
+            email: "  Person@Example.COM ",
+            password: "long-enough"
         })
         const response = createResponse()
 
         await signup(request, response)
 
+        expect(accountMock).toHaveBeenCalledWith("person@example.com")
+        expect(response.status).toHaveBeenCalledWith(409)
         expect(response.json).toHaveBeenCalledWith({
             status: "fail",
+            code: "EMAIL_EXISTS",
             message: "Email already has an account"
         })
         expect(queryMock).not.toHaveBeenCalled()
@@ -103,21 +124,37 @@ describe("user controller", () => {
         queryMock.mockResolvedValue({ rows: [] } as never)
         const request = createRequest({
             email: "person@example.com",
-            password: "secret"
+            password: "long-enough"
         })
         const response = createResponse()
 
         await signup(request, response)
 
-        expect(hashMock).toHaveBeenCalledWith("secret", "salt")
+        expect(hashMock).toHaveBeenCalledWith("long-enough", "salt")
         expect(queryMock).toHaveBeenCalledWith(
             "INSERT INTO users (email, password) VALUES ($1, $2)",
             ["person@example.com", "hashed-password"]
         )
-        expect(response.status).toHaveBeenCalledWith(200)
+        expect(response.status).toHaveBeenCalledWith(201)
     })
 
-    it("returns a token after a successful login", async () => {
+    it("rejects passwords outside the supported length", async () => {
+        const response = createResponse()
+
+        await signup(
+            createRequest({
+                email: "person@example.com",
+                password: "short"
+            }),
+            response
+        )
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(accountMock).not.toHaveBeenCalled()
+        expect(queryMock).not.toHaveBeenCalled()
+    })
+
+    it("creates a cookie session without returning a token", async () => {
         getUserMock.mockResolvedValue({
             id: "user-1",
             email: "person@example.com",
@@ -127,24 +164,108 @@ describe("user controller", () => {
         compareMock.mockResolvedValue(true)
         tokenMock.mockReturnValue("signed-token")
         const request = createRequest({
-            email: "person@example.com",
-            password: "secret"
+            email: " PERSON@example.com ",
+            password: "long-enough"
         })
         const response = createResponse()
 
         await login(request, response)
 
-        expect(compareMock).toHaveBeenCalledWith("secret", "hashed-password")
+        expect(getUserMock).toHaveBeenCalledTimes(1)
+        expect(getUserMock).toHaveBeenCalledWith("person@example.com")
+        expect(accountMock).not.toHaveBeenCalled()
+        expect(compareMock).toHaveBeenCalledWith("long-enough", "hashed-password")
         expect(tokenMock).toHaveBeenCalledWith("user-1", response)
         expect(response.json).toHaveBeenCalledWith({
             status: "success",
-            id: "user-1",
-            email: "person@example.com",
-            token: "signed-token"
+            data: {
+                user: {
+                    userId: "user-1",
+                    email: "person@example.com"
+                }
+            }
         })
     })
 
-    it("rejects an incorrect password", async () => {
+    it.each([
+        ["an unknown account", undefined, true],
+        [
+            "an incorrect password",
+            {
+                id: "user-1",
+                email: "person@example.com",
+                password: "hashed-password"
+            },
+            false
+        ]
+    ])("uses the same response for %s", async (_case, user, unknownAccount) => {
+        getUserMock.mockResolvedValue(user)
+        if (!unknownAccount) compareMock.mockResolvedValue(false)
+        const response = createResponse()
+
+        await login(
+            createRequest({
+                email: "person@example.com",
+                password: "long-enough"
+            }),
+            response
+        )
+
+        expect(getUserMock).toHaveBeenCalledTimes(1)
+        expect(response.status).toHaveBeenCalledWith(401)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "UNAUTHENTICATED",
+            message: "Invalid credentials"
+        })
+        expect(tokenMock).not.toHaveBeenCalled()
+    })
+
+    it("rejects invalid login input before account lookup", async () => {
+        const response = createResponse()
+
+        await login(
+            createRequest({ email: "not-an-email", password: "long-enough" }),
+            response
+        )
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(getUserMock).not.toHaveBeenCalled()
+    })
+
+    it("verifies an authenticated session with user identity", async () => {
+        const response = createResponse()
+
+        await verifySession(createRequest({}), response)
+
+        expect(response.json).toHaveBeenCalledWith({
+            status: "success",
+            data: {
+                userId: "user-1"
+            }
+        })
+    })
+
+    it("clears the session cookie on logout", async () => {
+        const response = createResponse()
+
+        await logout(createRequest({}), response)
+
+        expect(response.clearCookie).toHaveBeenCalledWith(
+            "jwt",
+            expect.objectContaining({
+                httpOnly: true,
+                sameSite: "strict"
+            })
+        )
+        expect(response.status).toHaveBeenCalledWith(200)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "success",
+            data: {}
+        })
+    })
+
+    it("uses a generic response even when password comparison fails", async () => {
         getUserMock.mockResolvedValue({
             id: "user-1",
             email: "person@example.com",
@@ -155,22 +276,19 @@ describe("user controller", () => {
         const response = createResponse()
 
         await login(
-            createRequest({ email: "person@example.com", password: "wrong" }),
+            createRequest({
+                email: "person@example.com",
+                password: "wrong-but-long"
+            }),
             response
         )
 
+        expect(response.status).toHaveBeenCalledWith(401)
         expect(response.json).toHaveBeenCalledWith({
             status: "fail",
-            message: "Wrong password"
+            code: "UNAUTHENTICATED",
+            message: "Invalid credentials"
         })
         expect(tokenMock).not.toHaveBeenCalled()
-    })
-
-    it("verifies an authenticated session", async () => {
-        const response = createResponse()
-
-        await verifySession(createRequest({}), response)
-
-        expect(response.json).toHaveBeenCalledWith({ status: "success" })
     })
 })

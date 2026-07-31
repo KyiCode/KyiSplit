@@ -4,6 +4,7 @@ export default defineConfig({
     test: {
         clearMocks: true,
         environment: "node",
-        include: ["src/**/*.test.ts"]
+        include: ["src/**/*.test.ts"],
+        exclude: ["src/**/*.db.test.ts"]
     }
 })

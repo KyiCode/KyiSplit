@@ -30,8 +30,9 @@
 ## Implementation
 
 - Never commit secrets.
-- Treat [`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) as a
-  reference, not a migration.
+- Database schema changes are applied manually outside this repository. Keep
+  [`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) aligned with
+  the schema the application expects; it is a reference, not a migration.
 - Use TDD for behavioral changes: write a failing test, implement the smallest
   fix, then refactor.
 - Keep frontend and backend API contracts aligned.

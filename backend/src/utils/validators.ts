@@ -59,11 +59,27 @@ export async function hasAccount(email: string) {
     return hasEmail.rows.length > 0
 }
 
-export async function isValidInvite(token: string) {
+export async function isValidInvite(token: string, now = new Date()) {
     const hasToken = await database.query(
-        'SELECT group_id FROM invites WHERE token = $1',
+        'SELECT group_id, expires_at FROM invites WHERE token = $1',
         [token]
     )
-    const isValid = hasToken.rows.length > 0
-    return { isValid: isValid, groupId: hasToken.rows[0].group_id }
+
+    if (hasToken.rows.length === 0) {
+        return { isValid: false as const, reason: "not_found" as const }
+    }
+
+    const invite = hasToken.rows[0]
+    const expiresAt = new Date(invite.expires_at)
+    if (
+        Number.isNaN(expiresAt.getTime()) ||
+        now.getTime() >= expiresAt.getTime()
+    ) {
+        return { isValid: false as const, reason: "expired" as const }
+    }
+
+    return {
+        isValid: true as const,
+        groupId: invite.group_id as string
+    }
 }

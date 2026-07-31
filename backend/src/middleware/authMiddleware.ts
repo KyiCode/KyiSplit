@@ -1,52 +1,72 @@
-import express, { NextFunction } from 'express'
+import { NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import database from '../db'
-import dotenv from 'dotenv'
 
 import { Request, Response } from 'express'
-import { json } from 'node:stream/consumers'
-
-dotenv.config()
+import { readAuthConfig } from '../config'
+import { sendFailure } from '../contracts/http'
+import { logger } from '../logging/logger'
 
 const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-    console.log("In middleware")
+    const token = req.cookies?.jwt
 
-    let token
-    const auth = req.headers.authorization
-
-    // set tokenn if have
-    if (auth && auth.startsWith("Bearer")) {
-        token = auth.split(" ")[1]
-    } else if (req.cookies?.jwt) {
-        token = req.cookies.jwt
-    }
-
-    // if not token not authorised
     if (!token) {
-        res.status(401).json({ message: "not authorised" })
+        sendFailure(
+            res,
+            401,
+            "UNAUTHENTICATED",
+            "Not authenticated"
+        )
         return
     }
-    // verify token with kwt.verif
 
-    interface tokenPayLoad {
+    interface TokenPayload {
         userId: string
     }
 
-    let decoded
+    let decoded: TokenPayload
     try {
-        decoded = jwt.verify(token, process.env.JWT_KEY!) as tokenPayLoad
+        const { jwtKey } = readAuthConfig()
+        decoded = jwt.verify(token, jwtKey) as TokenPayload
     } catch (error) {
-        res.status(401).json({ error: "Invalid token" })
+        logger.warn("authentication_rejected", {
+            operation: "verify_session_token"
+        }, error)
+        sendFailure(
+            res,
+            401,
+            "UNAUTHENTICATED",
+            "Not authenticated"
+        )
         return
     }
 
-    const hasUser = await database.query(
-        'SELECT * FROM users WHERE id = $1',
-        [decoded.userId]
-    )
+    let hasUser
+    try {
+        hasUser = await database.query(
+            'SELECT 1 FROM users WHERE id = $1',
+            [decoded.userId]
+        )
+    } catch (error) {
+        logger.error("authentication_lookup_failed", {
+            operation: "verify_session_user"
+        }, error)
+        sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error"
+        )
+        return
+    }
 
     if (hasUser.rows.length == 0) {
-        res.status(401).json({ error: 'User not found' })
+        sendFailure(
+            res,
+            401,
+            "UNAUTHENTICATED",
+            "Not authenticated"
+        )
         return
     }
 

@@ -19,6 +19,7 @@ import {
     hasExpense,
     hasUser,
     isUserAuthorised,
+    isValidInvite,
     isValidSplit
 } from "./validators"
 
@@ -68,5 +69,51 @@ describe("validators", () => {
                 { userId: "bob", amount: 6 }
             ])
         ).resolves.toBe(false)
+    })
+
+    it("handles an unknown invitation without throwing", async () => {
+        queryMock.mockResolvedValue({ rows: [] } as never)
+
+        await expect(isValidInvite(
+            "missing",
+            new Date("2026-07-31T02:00:00.000Z")
+        )).resolves.toEqual({
+            isValid: false,
+            reason: "not_found"
+        })
+    })
+
+    it("rejects an invitation at its expiration instant", async () => {
+        queryMock.mockResolvedValue({
+            rows: [{
+                expires_at: new Date("2026-07-31T03:00:00.000Z"),
+                group_id: "group-1"
+            }]
+        } as never)
+
+        await expect(isValidInvite(
+            "expired",
+            new Date("2026-07-31T03:00:00.000Z")
+        )).resolves.toEqual({
+            isValid: false,
+            reason: "expired"
+        })
+    })
+
+    it("accepts an invitation before its expiration instant", async () => {
+        queryMock.mockResolvedValue({
+            rows: [{
+                expires_at: new Date("2026-07-31T03:00:00.000Z"),
+                group_id: "group-1"
+            }]
+        } as never)
+
+        await expect(isValidInvite(
+            "valid",
+            new Date("2026-07-31T02:59:59.999Z")
+        )).resolves.toEqual({
+            isValid: true,
+            groupId: "group-1"
+        })
     })
 })
