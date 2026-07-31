@@ -1,7 +1,12 @@
 import express from 'express'
 
-import { addGroup, addMember, getGroup, getGroupList, getGroupMembers, getInvite, joinGroup } from '../controllers/groupController'
+import { addGroup, getGroup, getGroupList, getGroupMembers, getInvite, joinGroup } from '../controllers/groupController'
 import { getBalance } from '../controllers/balanceController'
+import {
+    createRepayment,
+    deleteRepayment,
+    listRepayments
+} from '../controllers/repaymentController'
 
 import authMiddleware from '../middleware/authMiddleware'
 
@@ -14,8 +19,6 @@ router.use(authMiddleware)
 
 router.post("/addgroup", addGroup)
 
-router.post("/addmember", addMember)
-
 router.get("/grouplist", getGroupList)
 
 router.get("/:groupId", getGroup)
@@ -26,6 +29,10 @@ router.post("/:groupId/invite", getInvite)
 router.post("/join/:token", joinGroup)
 
 router.get("/:groupId/getbalance", getBalance)
+
+router.get("/:groupId/repayments", listRepayments)
+router.post("/:groupId/repayments", createRepayment)
+router.delete("/:groupId/repayments/:repaymentId", deleteRepayment)
 
 export default router
 // router.post('/deletemember', deleteMemeber)

@@ -1,28 +1,104 @@
-import { getCurrency } from "./queries"
+import { logger } from "../logging/logger"
 
-export async function getExchangeRate(base: string, target: string) {
-    if (base === target) {
-        return 1
-    } else {
-        const xchangeRes = await fetch(`https://api.frankfurter.dev/v2/rate/${base}/${target}`)
-        const xchange = await xchangeRes.json()
-        return xchange.rate
+export interface FxQuote {
+    rate: string
+    provider: string
+    effectiveAt: string | null
+}
+
+export class FxUnavailableError extends Error {
+    constructor(message = "Exchange rate is unavailable") {
+        super(message)
+        this.name = "FxUnavailableError"
     }
 }
 
+export class DataIntegrityError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = "DataIntegrityError"
+    }
+}
 
-export async function convertCurrency(payments: { expense_id: string, user_id: string, amount: number }[], targetCurrency: string) {
-    return await Promise.all(payments.map(async payment => {
-        const currency = await getCurrency(payment.expense_id)
-        const currencyMapper = new Map<String, number>()
+function parseEffectiveAt(value: unknown): string | null {
+    if (value === undefined || value === null) return null
+    if (typeof value !== "string") {
+        throw new FxUnavailableError()
+    }
 
-        if (!currencyMapper.has(currency)) currencyMapper.set(currency, await getExchangeRate(currency, targetCurrency))
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? new Date(`${value}T00:00:00.000Z`)
+        : new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        throw new FxUnavailableError()
+    }
+    return date.toISOString()
+}
 
-        const exchangeRate = currencyMapper.get(currency)
-        if (!exchangeRate) throw new Error("exchange rate error")
+export function validateFxQuote(value: FxQuote): FxQuote {
+    const numericRate = Number(value.rate)
+    if (
+        typeof value.rate !== "string" ||
+        !/^\d+(?:\.\d+)?$/.test(value.rate) ||
+        !Number.isFinite(numericRate) ||
+        numericRate <= 0 ||
+        typeof value.provider !== "string" ||
+        value.provider.trim() !== value.provider ||
+        value.provider.length === 0 ||
+        value.provider.length > 100
+    ) {
+        throw new FxUnavailableError()
+    }
+    return {
+        rate: value.rate,
+        provider: value.provider,
+        effectiveAt: parseEffectiveAt(value.effectiveAt)
+    }
+}
+
+export async function getFxQuote(
+    base: string,
+    target: string
+): Promise<FxQuote> {
+    if (base === target) {
         return {
-            user_id: payment.user_id,
-            amount: Number(payment.amount) * exchangeRate
+            rate: "1",
+            provider: "identity",
+            effectiveAt: null
         }
-    }))
+    }
+
+    try {
+        const response = await fetch(
+            `https://api.frankfurter.dev/v2/rate/${base}/${target}`
+        )
+        if (!response.ok) throw new FxUnavailableError()
+
+        const body = await response.json() as {
+            rate?: unknown
+            date?: unknown
+        }
+        const numericRate = typeof body.rate === "number"
+            ? body.rate
+            : Number(body.rate)
+        if (!Number.isFinite(numericRate) || numericRate <= 0) {
+            throw new FxUnavailableError()
+        }
+
+        return validateFxQuote({
+            rate: String(body.rate),
+            provider: "frankfurter",
+            effectiveAt: body.date === undefined
+                ? null
+                : String(body.date)
+        })
+    } catch (error) {
+        if (error instanceof FxUnavailableError) throw error
+        logger.warn("fx_provider_request_failed", {
+            operation: "get_fx_quote",
+            sourceCurrency: base,
+            targetCurrency: target
+        }, error)
+        throw new FxUnavailableError()
+    }
 }

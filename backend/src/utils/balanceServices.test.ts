@@ -1,127 +1,207 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-vi.mock("./queries", () => ({
-    getExpenses: vi.fn(),
-    getSplits: vi.fn(),
-    getUsersInGroup: vi.fn()
-}))
-
-vi.mock("./validators", () => ({
-    hasInvalidExpenses: vi.fn()
-}))
-
-vi.mock("./currencyServices", () => ({
-    convertCurrency: vi.fn()
-}))
-
-import { MaxPriorityQueue } from "@datastructures-js/priority-queue"
+import { DataIntegrityError } from "./currencyServices"
 import {
-    computeLeastTransactions,
-    initialiseMappings,
-    populateHeap,
-    populateMap
+    calculateDeterministicBalance,
+    type BalanceDataset
 } from "./balanceServices"
 
-describe("balance services", () => {
-    it("initialises every member with a zero balance", () => {
-        expect(initialiseMappings(["alice", "bob"])).toEqual(
-            new Map([
-                ["alice", 0],
-                ["bob", 0]
-            ])
-        )
-    })
+function expense(
+    override: Partial<BalanceDataset["expenses"][number]> = {}
+): BalanceDataset["expenses"][number] {
+    return {
+        expenseId: "expense-1",
+        sourceCurrency: "SGD",
+        targetCurrency: "SGD",
+        total: "10.00",
+        rate: "1",
+        payments: [{ userId: "alice", amount: "10.00" }],
+        splits: [{ userId: "bob", amount: "10.00" }],
+        ...override
+    }
+}
 
-    it("totals multiple payments and splits for each member", () => {
-        const result = populateMap(
-            ["alice", "bob"],
-            [
-                { user_id: "alice", amount: 20 },
-                { user_id: "alice", amount: 5 }
+describe("deterministic balance engine", () => {
+    it("rounds half up and allocates largest remainders exactly", () => {
+        const result = calculateDeterministicBalance({
+            currency: "SGD",
+            members: ["alice", "bob"],
+            expenses: [expense({
+                total: "0.03",
+                rate: "0.5",
+                sourceCurrency: "USD",
+                payments: [{ userId: "alice", amount: "0.03" }],
+                splits: [
+                    { userId: "alice", amount: "0.01" },
+                    { userId: "bob", amount: "0.02" }
+                ]
+            })],
+            repayments: []
+        })
+
+        expect(result).toEqual({
+            currency: "SGD",
+            balances: [
+                { userId: "alice", amount: "0.01" },
+                { userId: "bob", amount: "-0.01" }
             ],
-            [
-                { user_id: "alice", amount: 10 },
-                { user_id: "bob", amount: 15 }
-            ]
-        )
-
-        expect(result.payerBillMap.get("alice")).toBe(25)
-        expect(result.owerBillMap.get("alice")).toBe(10)
-        expect(result.owerBillMap.get("bob")).toBe(15)
+            settlements: [{
+                payerUserId: "bob",
+                receiverUserId: "alice",
+                amount: "0.01"
+            }]
+        })
     })
 
-    it("separates debtors from receivers using their net balances", () => {
-        const { receiverHeap, owerHeap } = populateHeap(
-            ["alice", "bob", "charlie"],
-            new Map([
-                ["alice", 30],
-                ["bob", 0],
-                ["charlie", 0]
-            ]),
-            new Map([
-                ["alice", 10],
-                ["bob", 15],
-                ["charlie", 5]
-            ])
-        )
+    it("uses user ID ascending to break equal allocation remainders", () => {
+        const result = calculateDeterministicBalance({
+            currency: "SGD",
+            members: ["bob", "alice"],
+            expenses: [expense({
+                total: "0.02",
+                rate: "1.5",
+                sourceCurrency: "USD",
+                payments: [
+                    { userId: "bob", amount: "0.01" },
+                    { userId: "alice", amount: "0.01" }
+                ],
+                splits: [{ userId: "bob", amount: "0.02" }]
+            })],
+            repayments: []
+        })
 
-        expect(receiverHeap.pop()).toEqual({ userId: "alice", amount: 20 })
-        expect(owerHeap.pop()).toEqual({ userId: "bob", amount: 15 })
-        expect(owerHeap.pop()).toEqual({ userId: "charlie", amount: 5 })
+        expect(result.balances).toEqual([
+            { userId: "alice", amount: "0.02" },
+            { userId: "bob", amount: "-0.02" }
+        ])
     })
 
-    it("settles one debtor and one receiver", () => {
-        const receivers = new MaxPriorityQueue<{ userId: string, amount: number }>(
-            item => item.amount
-        )
-        const debtors = new MaxPriorityQueue<{ userId: string, amount: number }>(
-            item => item.amount
-        )
-        receivers.push({ userId: "alice", amount: 12.5 })
-        debtors.push({ userId: "bob", amount: 12.5 })
+    it("combines currencies, includes zero members, and applies repayments", () => {
+        const dataset: BalanceDataset = {
+            currency: "SGD",
+            members: ["zero", "charlie", "alice", "bob"],
+            expenses: [
+                expense({
+                    expenseId: "sgd",
+                    total: "10.00",
+                    payments: [{ userId: "alice", amount: "10.00" }],
+                    splits: [
+                        { userId: "bob", amount: "5.00" },
+                        { userId: "charlie", amount: "5.00" }
+                    ]
+                }),
+                expense({
+                    expenseId: "usd",
+                    sourceCurrency: "USD",
+                    total: "4.00",
+                    rate: "1.25",
+                    payments: [{ userId: "bob", amount: "4.00" }],
+                    splits: [
+                        { userId: "alice", amount: "2.00" },
+                        { userId: "charlie", amount: "2.00" }
+                    ]
+                })
+            ],
+            repayments: [{
+                payerUserId: "charlie",
+                receiverUserId: "alice",
+                amount: "2.00",
+                currency: "SGD"
+            }]
+        }
 
-        expect(computeLeastTransactions(receivers, debtors)).toEqual([
+        expect(calculateDeterministicBalance(dataset)).toEqual({
+            currency: "SGD",
+            balances: [
+                { userId: "alice", amount: "5.50" },
+                { userId: "bob", amount: "0.00" },
+                { userId: "charlie", amount: "-5.50" },
+                { userId: "zero", amount: "0.00" }
+            ],
+            settlements: [{
+                payerUserId: "charlie",
+                receiverUserId: "alice",
+                amount: "5.50"
+            }]
+        })
+    })
+
+    it("is byte-equivalent for shuffled input and repeated execution", () => {
+        const ordered: BalanceDataset = {
+            currency: "SGD",
+            members: ["alice", "bob", "charlie", "dave"],
+            expenses: [expense({
+                total: "4.00",
+                payments: [
+                    { userId: "alice", amount: "2.00" },
+                    { userId: "bob", amount: "2.00" }
+                ],
+                splits: [
+                    { userId: "charlie", amount: "2.00" },
+                    { userId: "dave", amount: "2.00" }
+                ]
+            })],
+            repayments: []
+        }
+        const shuffled: BalanceDataset = {
+            ...ordered,
+            members: [...ordered.members].reverse(),
+            expenses: ordered.expenses.map(item => ({
+                ...item,
+                payments: [...item.payments].reverse(),
+                splits: [...item.splits].reverse()
+            }))
+        }
+
+        const first = JSON.stringify(calculateDeterministicBalance(ordered))
+        const second = JSON.stringify(calculateDeterministicBalance(shuffled))
+        const repeated = JSON.stringify(
+            calculateDeterministicBalance(ordered)
+        )
+
+        expect(second).toBe(first)
+        expect(repeated).toBe(first)
+        expect(JSON.parse(first).settlements).toEqual([
             {
-                payingUserId: "bob",
-                receivingUserId: "alice",
-                amount: 12.5
+                payerUserId: "charlie",
+                receiverUserId: "alice",
+                amount: "2.00"
+            },
+            {
+                payerUserId: "dave",
+                receiverUserId: "bob",
+                amount: "2.00"
             }
         ])
     })
 
-    it("settles several members without overpaying any receiver", () => {
-        const { receiverHeap, owerHeap } = populateHeap(
-            ["alice", "bob", "charlie"],
-            new Map([
-                ["alice", 30],
-                ["bob", 0],
-                ["charlie", 0]
-            ]),
-            new Map([
-                ["alice", 10],
-                ["bob", 15],
-                ["charlie", 5]
-            ])
-        )
-
-        const transactions = computeLeastTransactions(receiverHeap, owerHeap)
-
-        expect(transactions).toHaveLength(2)
-        expect(transactions.reduce((sum, item) => sum + item.amount, 0)).toBe(20)
-        expect(transactions.every(item => item.receivingUserId === "alice")).toBe(true)
-    })
-
-    it("throws if debtors and receivers do not balance", () => {
-        const receivers = new MaxPriorityQueue<{ userId: string, amount: number }>(
-            item => item.amount
-        )
-        const debtors = new MaxPriorityQueue<{ userId: string, amount: number }>(
-            item => item.amount
-        )
-        receivers.push({ userId: "alice", amount: 10 })
-
-        expect(() => computeLeastTransactions(receivers, debtors)).toThrow(
-            "Heap mismatch during settlement"
-        )
+    it.each([
+        [
+            "missing FX",
+            expense({ rate: null as unknown as string })
+        ],
+        [
+            "wrong target",
+            expense({ targetCurrency: "USD" })
+        ],
+        [
+            "unbalanced payments",
+            expense({
+                payments: [{ userId: "alice", amount: "9.99" }]
+            })
+        ],
+        [
+            "unknown participant",
+            expense({
+                payments: [{ userId: "outsider", amount: "10.00" }]
+            })
+        ]
+    ])("rejects contradictory stored data: %s", (_name, invalidExpense) => {
+        expect(() => calculateDeterministicBalance({
+            currency: "SGD",
+            members: ["alice", "bob"],
+            expenses: [invalidExpense],
+            repayments: []
+        })).toThrow(DataIntegrityError)
     })
 })

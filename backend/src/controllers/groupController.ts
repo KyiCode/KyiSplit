@@ -1,170 +1,267 @@
-import express from 'express'
 import database from '../db'
 import { Request, Response } from 'express'
-import { json } from 'node:stream/consumers'
-import { queryGroupMembers, getGroupName, getUserGroups } from '../utils/queries'
+import { queryGroupMembers, getGroupDetails, getUserGroups } from '../utils/queries'
 import { isUserAuthorised, isValidInvite } from '../utils/validators'
 import { generateInvite } from '../utils/inviteGenerator'
+import { parseBoundedName, parseCurrencyCode } from '../utils/groupValidation'
+import { runInTransaction } from '../utils/transaction'
+import { sendFailure, sendSuccess } from '../contracts/http'
+import { logger } from '../logging/logger'
 
 
 export const addGroup = async (req: Request, res: Response) => {
-    console.log("adding group")
     const userId = req.user.userId
-    const { groupName, groupUserName } = req.body
-    try {
-        const result = await database.query(
-            'INSERT into groups (name) VALUES ($1) RETURNING id',
-            [groupName]
+    const groupName = parseBoundedName(req.body?.groupName, 100)
+    const groupUserName = parseBoundedName(req.body?.groupUserName, 50)
+    const defaultCurrency = parseCurrencyCode(req.body?.defaultCurrency)
+    if (!groupName || !groupUserName || !defaultCurrency) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid group or display name"
         )
-
-        const groupId = result.rows[0].id
-
-        await database.query(
-            'INSERT into group_members (user_id,group_id, user_group_name) VALUES ($1, $2, $3)',
-            [userId, groupId, groupUserName]
-        )
-
-        return res.status(201).json({ status: "success", message: "Group Added" })
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({ status: "error", error: "server error adding group" })
     }
 
-}
-
-export const addMember = async (req: Request, res: Response) => {
-    console.log("adding member")
     try {
-        const { userId, groupId } = req.body
+        const groupId = await runInTransaction(async client => {
+            const result = await client.query(
+                `INSERT into groups (name, default_currency)
+                 VALUES ($1, $2)
+                 RETURNING id`,
+                [groupName, defaultCurrency]
+            )
 
-        const findGroup = await database.query(
-            'SELECT * FROM groups WHERE id = $1',
-            [groupId]
-        )
+            const createdGroupId = result.rows[0].id
+            await client.query(
+                'INSERT into group_members (user_id,group_id, user_group_name) VALUES ($1, $2, $3)',
+                [userId, createdGroupId, groupUserName]
+            )
+            return createdGroupId
+        })
 
-        const findUser = await database.query(
-            'SELECT * FROM users WHERE id = $1',
-            [userId]
-        )
-
-        const userAlreadyInGroup = await database.query(
-            'SELECT * FROM group_members WHERE group_id = $1 AND user_id = $2',
-            [userId, groupId]
-        )
-
-        // error where user already in group not caught
-        if (findGroup.rows.length == 0 || findUser.rows.length == 0) return res.json({ message: "Group or User invalid" })
-        if (userAlreadyInGroup.rows.length > 0) return res.json({ message: "User already in group" })
-
-        await database.query(
-            'INSERT INTO group_members (group_id, user_id) VALUES ($1, $2)',
-            [groupId, userId]
-        )
-
-        return res.status(201).json({ Status: "success" })
+        return sendSuccess(res, 201, {
+            message: "Group Added",
+            groupId,
+            defaultCurrency
+        })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ error: "server error adding Member" })
+        logger.error("group_creation_failed", {
+            operation: "add_group"
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error adding group"
+        )
     }
+
 }
 
 export const getGroupList = async (req: Request, res: Response) => {
-    console.log("getting group list")
     const user = req.user.userId
     try {
         const groups = await getUserGroups(user)
         const groupDetails = await Promise.all(
-            groups.map(async (group) => ({
-                groupId: group.group_id,
-                groupName: await getGroupName(group.group_id),
-                groupMembers: await queryGroupMembers(group.group_id)
-            }))
+            groups.map(async (group) => {
+                const details = await getGroupDetails(group.group_id)
+                return {
+                    groupId: group.group_id,
+                    ...details,
+                    groupMembers: await queryGroupMembers(group.group_id)
+                }
+            })
         )
-        return res.status(200).json({ status: "success", user, groupDetails })
+        return sendSuccess(res, 200, {
+            userId: user,
+            groups: groupDetails
+        })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ error: "server error getting grouplist" })
+        logger.error("group_list_failed", {
+            operation: "list_groups"
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error getting group list"
+        )
     }
 }
 
 export const getGroupMembers = async (req: Request, res: Response) => {
-    console.log("getting group members")
     const user = req.user.userId
     const groupId = req.params.groupId as string
     try {
-        if (!isUserAuthorised(user, groupId)) return res.status(400).json({ status: "fail", message: " error getting members" })
+        if (!(await isUserAuthorised(user, groupId))) {
+            return sendFailure(
+                res,
+                403,
+                "FORBIDDEN",
+                "Forbidden"
+            )
+        }
 
         const queryResult = await queryGroupMembers(groupId)
-        console.log(queryResult)
 
-        return res.json(queryResult)
+        return sendSuccess(res, 200, { members: queryResult })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ error: "server error getting grouplist" })
+        logger.error("group_members_failed", {
+            operation: "list_group_members",
+            groupId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error getting group members"
+        )
     }
 
 }
 
-// can combine with get grp members maybe
 export const getGroup = async (req: Request, res: Response) => {
-    console.log("entering group")
     const user = req.user.userId
     const group = req.params.groupId as string
     try {
         const valid = await isUserAuthorised(user, group)
-        if (valid) {
-            const groupName = await getGroupName(group)
-            return res.status(200).json({ status: "success", groupName })
-        } else {
-            return res.status(400).json({ message: "User unauthorised or Invalid group" })
+        if (!valid) {
+            return sendFailure(
+                res,
+                403,
+                "FORBIDDEN",
+                "Forbidden"
+            )
         }
+
+        const groupDetails = await getGroupDetails(group)
+        return sendSuccess(res, 200, groupDetails)
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ message: "server error entering group" })
+        logger.error("group_detail_failed", {
+            operation: "get_group",
+            groupId: group
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error entering group"
+        )
     }
 }
 
 export const getInvite = async (req: Request, res: Response) => {
-    console.log("generating invtie")
     const user = req.user.userId
     const groupId = req.params.groupId as string
     try {
         const valid = await isUserAuthorised(user, groupId)
         if (!valid) {
-            return res.status(400).json({ message: "User unauthorised or Invalid group" })
+            return sendFailure(
+                res,
+                403,
+                "FORBIDDEN",
+                "Forbidden"
+            )
         }
-        const inviteToken = await generateInvite(groupId, user)
-        if (!inviteToken) return res.status(400).json({ status: "fail", message: "generator error" })
-        return res.status(200).json({ status: "success", inviteToken })
+        const inviteUrl = await generateInvite(groupId, user)
+        return sendSuccess(res, 200, { inviteUrl })
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({ status: "fail", message: "server error entering group" })
+        logger.error("invite_creation_failed", {
+            operation: "create_invite",
+            groupId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error creating invite"
+        )
     }
 }
 
 export const joinGroup = async (req: Request, res: Response) => {
-    console.log("attempting join invtie")
     const user = req.user.userId
     const token = req.params.token as string
-    const userName = req.body.userName
+    const userName = parseBoundedName(req.body?.userName, 50)
+
     if (!user || !token) {
-        console.log("here")
-        return res.status(400).json({ status: "fail", message: "Expired cookie / Invalid token" })
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid invitation request"
+        )
     }
+    if (!userName) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid display name"
+        )
+    }
+
     try {
-        const { isValid, groupId } = await isValidInvite(token)
-        if (!isValid || !groupId) return res.status(400).json({ status: "fail", message: "not valid token" })
-        if (await isUserAuthorised(user, groupId)) return res.status(400).json({ status: "fail", message: "user already in group" })
-        const resu = await database.query(
+        const invite = await isValidInvite(token)
+        if (!invite.isValid) {
+            const status = invite.reason === "expired" ? 410 : 404
+            return sendFailure(
+                res,
+                status,
+                invite.reason === "expired"
+                    ? "INVITE_EXPIRED"
+                    : "INVITE_NOT_FOUND",
+                invite.reason === "expired"
+                    ? "Invitation expired"
+                    : "Invitation not found"
+            )
+        }
+
+        const { groupId } = invite
+        if (await isUserAuthorised(user, groupId)) {
+            return sendFailure(
+                res,
+                409,
+                "ALREADY_MEMBER",
+                "User already in group"
+            )
+        }
+
+        await database.query(
             'INSERT INTO group_members (group_id, user_id, user_group_name) VALUES ($1,$2, $3)',
             [groupId, user, userName]
         )
 
-        console.log(resu)
-        return res.status(200).json({ status: "success", groupId })
+        return sendSuccess(res, 200, { groupId })
     } catch (error) {
-        console.log(error)
-        return res.status(400).json({ status: "fail", message: "server unable to join" })
+        if (
+            error &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === "23505"
+        ) {
+            logger.warn("group_join_conflict", {
+                operation: "join_group"
+            }, error)
+            return sendFailure(
+                res,
+                409,
+                "ALREADY_MEMBER",
+                "User already in group"
+            )
+        }
+
+        logger.error("group_join_failed", {
+            operation: "join_group"
+        }, error)
+
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server unable to join group"
+        )
     }
 
 }

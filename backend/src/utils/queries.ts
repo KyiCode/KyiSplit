@@ -42,12 +42,6 @@ export async function getSplits(expenses: string[]) {
     return { payments: paymentResult.rows, splits: splitResult.rows }
 }
 
-export async function getCurrency(expenseId: string) {
-    const currencyRes = await database.query('SELECT currency FROM expenses WHERE id = $1', [expenseId])
-    const currency = currencyRes.rows[0].currency
-    return currency
-}
-
 export async function getUser(email: string) {
     const user = await database.query(
         "SELECT * FROM users WHERE email = $1",
@@ -70,6 +64,22 @@ export async function getGroupName(groupId: string) {
         [groupId]
     )
     return groupName.rows[0].name
+}
+
+export async function getGroupDetails(groupId: string) {
+    const result = await database.query<{
+        name: string
+        default_currency: string
+    }>(
+        `SELECT name, default_currency
+         FROM groups
+         WHERE id = $1`,
+        [groupId]
+    )
+    return {
+        groupName: result.rows[0].name,
+        defaultCurrency: result.rows[0].default_currency
+    }
 }
 
 export async function queryGroupMembers(groupId: string) {

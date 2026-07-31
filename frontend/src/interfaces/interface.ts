@@ -1,19 +1,11 @@
-export interface Group {
-    groupId: string,
-    groupName: string
-    groupMembers: GroupMemberType[]
-}
+import type {
+    ExpenseSummary,
+    GroupMember,
+    GroupSummary
+} from "../../../backend/src/contracts/api"
 
-// interfaces/interface.ts
-export interface ExpenseType {
-    expenseId: string,
-    groupId: string,
-    expenseName: string,
-    expenseTotal: string,
-    date: string,
-    createdAt: string,
-    currency: string | null
-}
+export type Group = GroupSummary
+export type ExpenseType = ExpenseSummary
 
 export interface CurrencyType {
     currencyIso: string,
@@ -25,10 +17,7 @@ export interface ExpenseMemberAmount {
     amount: number
 }
 
-export interface GroupMemberType {
-    userId: string,
-    userGroupName: string
-}
+export type GroupMemberType = GroupMember
 
 export type Payment = ExpenseMemberAmount
 export type Split = ExpenseMemberAmount

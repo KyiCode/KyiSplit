@@ -1,92 +1,61 @@
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+import type { GroupMemberType } from "../interfaces/interface"
+import { apiRequest } from "./client"
+import type {
+    CreateGroupData,
+    CreateGroupRequest,
+    GroupData,
+    GroupListData,
+    GroupMembersData,
+    InviteData,
+    JoinGroupData,
+    JoinGroupRequest
+} from "../../../backend/src/contracts/api"
 
 export async function fetchGroups() {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/grouplist`, {
-            credentials: "include"
-        })
-        if (!res) throw new Error(`HTTP error`)
-        return res.json()
-
-    } catch (error) {
-        console.error("Failed to fetch groups:", error)
-        throw error  // re-throw so the caller knows it failed
-    }
+    return apiRequest<GroupListData>("/api/groups/grouplist")
 }
 
-export async function createGroup(groupName: string, groupUserName: string) {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/addgroup`, {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ groupName, groupUserName })
-        })
-        return res.json()
-    } catch (error) {
-        console.error("Failed to fetch groups:", error)
-        throw error  // re-throw so the caller knows it failed
+export async function createGroup(
+    groupName: string,
+    groupUserName: string,
+    defaultCurrency: string
+) {
+    const body: CreateGroupRequest = {
+        groupName,
+        groupUserName,
+        defaultCurrency
     }
+    return apiRequest<CreateGroupData>("/api/groups/addgroup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    })
 }
 
 export async function fetchGroup(groupId: string) {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/${groupId}`, {
-            credentials: "include",
-        })
-        return res.json()
-    } catch (error) {
-        console.error("Failed to fetch groups:", error)
-        throw error  // re-throw so the caller knows it failed
-    }
+    return apiRequest<GroupData>(`/api/groups/${groupId}`)
 }
 
-// export async function fetchUserName(groupId: string) {
-//     try {
-//         const res = fetchGroupMembers(groupId)
-//         res
-//     }
-
-// }
-
-export async function fetchGroupMembers(groupId: string) {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/${groupId}/members`, {
-            credentials: "include",
-        })
-        return res.json()
-    } catch (error) {
-        console.error("Failed to fetch group members:", error)
-        throw error  // re-throw so the caller knows it failed
-    }
+export async function fetchGroupMembers(
+    groupId: string
+): Promise<GroupMemberType[]> {
+    const data = await apiRequest<GroupMembersData>(
+        `/api/groups/${groupId}/members`
+    )
+    return data.members
 }
 
 export async function generateInvite(groupId: string) {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/${groupId}/invite`, {
-            credentials: "include",
-            method: "POST"
-        })
-        return res.json()
-    } catch (error) {
-        console.error("Failed to generate invite:", error)
-        throw error  // re-throw so the caller knows it failed
-    }
+    return apiRequest<InviteData>(`/api/groups/${groupId}/invite`, {
+        method: "POST"
+    })
 }
 
 export async function joinGroup(tokenId: string, userName: string) {
-    try {
-        const res = await fetch(`${BASE_URL}/api/groups/join/${tokenId}`, {
-            credentials: "include",
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userName })
-        })
-        return res.json()
-    } catch (error) {
-        console.error("Failed to generate invite:", error)
-        throw error  // re-throw so the caller knows it failed
-    }
-
+    const body: JoinGroupRequest = { userName }
+    return apiRequest<JoinGroupData>(`/api/groups/join/${tokenId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    })
 }
-

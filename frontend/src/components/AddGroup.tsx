@@ -1,15 +1,38 @@
-import { useState } from "react";
+import { useState } from "react"
+import type { CurrencyType } from "../interfaces/interface"
+import CurrencyPicker from "./CurrencyPicker"
+import Modal from "./Modal"
 
-function AddGroup({ onAddGroup }: { onAddGroup: (groupName: string, groupUserName: string) => void }) {
+function AddGroup({ onAddGroup }: {
+    onAddGroup: (
+        groupName: string,
+        groupUserName: string,
+        defaultCurrency: string
+    ) => Promise<boolean>
+}) {
     const [addingGroup, setAddingGroup] = useState(false);
     const [groupName, setGroupName] = useState("");
     const [userName, setUserName] = useState("");
+    const [currency, setCurrency] = useState<CurrencyType>()
+    const [showCurrencyPicker, setShowCurrencyPicker] = useState(false)
+    const [submitting, setSubmitting] = useState(false);
 
-    function handleAddGroup() {
-        onAddGroup(groupName, userName)
-        setGroupName("")
-        setUserName("")
-        setAddingGroup(false)
+    async function handleAddGroup() {
+        if (submitting || !currency) return
+
+        setSubmitting(true)
+        const created = await onAddGroup(
+            groupName,
+            userName,
+            currency.currencyIso
+        )
+        setSubmitting(false)
+        if (created) {
+            setGroupName("")
+            setUserName("")
+            setCurrency(undefined)
+            setAddingGroup(false)
+        }
     }
 
     return (
@@ -41,9 +64,35 @@ function AddGroup({ onAddGroup }: { onAddGroup: (groupName: string, groupUserNam
                             onChange={(e) => setUserName(e.target.value)}
                         />
                     </label>
-                    <button className="button primary full" disabled={!groupName.trim() || !userName.trim()} onClick={handleAddGroup}>
-                        Create group
+                    <div className="field">
+                        <span>Group currency</span>
+                        <button
+                            aria-label={currency
+                                ? `Group currency: ${currency.currencyIso} — ${currency.currencyName}. Change currency`
+                                : "Choose group currency"}
+                            className="button secondary full"
+                            type="button"
+                            onClick={() => setShowCurrencyPicker(true)}
+                        >
+                            {currency
+                                ? `${currency.currencyIso} — ${currency.currencyName}`
+                                : "Choose currency"}
+                        </button>
+                    </div>
+                    <button className="button primary full" disabled={!groupName.trim() || !userName.trim() || !currency || submitting} onClick={handleAddGroup}>
+                        {submitting ? "Creating…" : "Create group"}
                     </button>
+                    {showCurrencyPicker && (
+                        <Modal
+                            ariaLabel="Choose group currency"
+                            onClose={() => setShowCurrencyPicker(false)}
+                        >
+                            <CurrencyPicker onSelect={selection => {
+                                setCurrency(selection)
+                                setShowCurrencyPicker(false)
+                            }} />
+                        </Modal>
+                    )}
                 </div>
             ) : (
                 <button className="create-group-prompt" onClick={() => setAddingGroup(true)}>

@@ -1,71 +1,68 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("./queries", () => ({
-    getCurrency: vi.fn()
-}))
-
-import { getCurrency } from "./queries"
-import { convertCurrency, getExchangeRate } from "./currencyServices"
-
-const mockedGetCurrency = vi.mocked(getCurrency)
+import {
+    FxUnavailableError,
+    getFxQuote
+} from "./currencyServices"
 
 afterEach(() => {
+    vi.clearAllMocks()
     vi.unstubAllGlobals()
 })
 
-describe("currency services", () => {
-    it("returns one without fetching when currencies match", async () => {
+describe("FX provider", () => {
+    it("returns identity without fetching when currencies match", async () => {
         const fetchMock = vi.fn()
         vi.stubGlobal("fetch", fetchMock)
 
-        await expect(getExchangeRate("SGD", "SGD")).resolves.toBe(1)
+        await expect(getFxQuote("SGD", "SGD")).resolves.toEqual({
+            rate: "1",
+            provider: "identity",
+            effectiveAt: null
+        })
         expect(fetchMock).not.toHaveBeenCalled()
     })
 
-    it("returns the exchange rate from Frankfurter", async () => {
+    it("validates and returns a Frankfurter quote", async () => {
         const fetchMock = vi.fn().mockResolvedValue({
-            json: vi.fn().mockResolvedValue({ rate: 1.35 })
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                rate: 1.35,
+                date: "2026-07-30"
+            })
         })
         vi.stubGlobal("fetch", fetchMock)
 
-        await expect(getExchangeRate("USD", "SGD")).resolves.toBe(1.35)
+        await expect(getFxQuote("USD", "SGD")).resolves.toEqual({
+            rate: "1.35",
+            provider: "frankfurter",
+            effectiveAt: "2026-07-30T00:00:00.000Z"
+        })
         expect(fetchMock).toHaveBeenCalledWith(
             "https://api.frankfurter.dev/v2/rate/USD/SGD"
         )
     })
 
-    it("normalises payment amounts into the target currency", async () => {
-        mockedGetCurrency
-            .mockResolvedValueOnce("USD")
-            .mockResolvedValueOnce("SGD")
-        const fetchMock = vi.fn().mockResolvedValue({
-            json: vi.fn().mockResolvedValue({ rate: 1.25 })
-        })
-        vi.stubGlobal("fetch", fetchMock)
+    it.each([
+        [{ ok: false, json: vi.fn() }],
+        [{ ok: true, json: vi.fn().mockResolvedValue({}) }],
+        [{ ok: true, json: vi.fn().mockResolvedValue({ rate: 0 }) }],
+        [{ ok: true, json: vi.fn().mockResolvedValue({ rate: -1 }) }],
+        [{ ok: true, json: vi.fn().mockResolvedValue({ rate: "NaN" }) }],
+        [{ ok: true, json: vi.fn().mockRejectedValue(new Error("bad json")) }]
+    ])("maps malformed provider response %# to FX unavailable", async response => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response))
 
-        const result = await convertCurrency(
-            [
-                { expense_id: "expense-1", user_id: "alice", amount: 8 },
-                { expense_id: "expense-2", user_id: "bob", amount: 4 }
-            ],
-            "SGD"
+        await expect(getFxQuote("USD", "SGD")).rejects.toBeInstanceOf(
+            FxUnavailableError
         )
-
-        expect(result).toEqual([
-            { user_id: "alice", amount: 10 },
-            { user_id: "bob", amount: 4 }
-        ])
     })
 
-    it("propagates exchange-rate failures", async () => {
-        mockedGetCurrency.mockResolvedValue("USD")
+    it("maps provider network failure to FX unavailable", async () => {
         vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
 
-        await expect(
-            convertCurrency(
-                [{ expense_id: "expense-1", user_id: "alice", amount: 8 }],
-                "SGD"
-            )
-        ).rejects.toThrow("offline")
+        await expect(getFxQuote("USD", "SGD")).rejects.toBeInstanceOf(
+            FxUnavailableError
+        )
     })
 })

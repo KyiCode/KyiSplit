@@ -1,206 +1,270 @@
-import express from 'express'
 import { Request, Response } from 'express'
-import database from '../db'
 
-import { isUserAuthorised, hasUser, hasExpense, isValidSplit } from '../utils/validators'
-import { getExpenses, getGroupIdByExpense, getSplits } from '../utils/queries'
+import database from '../db'
+import type { DeleteExpenseData } from '../contracts/api'
+import { isUserAuthorised } from '../utils/validators'
+import { getExpenses } from '../utils/queries'
+import { getGroupDetails } from '../utils/queries'
+import { runInTransaction } from '../utils/transaction'
+import { parseExpenseInput } from '../utils/expenseValidation'
+import { sendFailure, sendSuccess } from '../contracts/http'
+import {
+    serializeDate,
+    serializeMoney,
+    serializeTimestamp
+} from '../contracts/serialization'
+import {
+    FxUnavailableError,
+    getFxQuote
+} from '../utils/currencyServices'
+import { isUuid } from '../utils/repaymentValidation'
+import { logger } from '../logging/logger'
 
 export const addExpense = async (req: Request, res: Response) => {
-    console.log("adding expense")
     const user = req.user.userId
-    const { groupId, expenseName, expenseTotal, expenseDate, expenseCurrency, paidBy, splits } = req.body
+    const parsedExpense = parseExpenseInput(req.body)
+    if (!parsedExpense.ok) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            parsedExpense.message
+        )
+    }
+
+    const {
+        groupId,
+        expenseName,
+        expenseTotal,
+        expenseDate,
+        expenseCurrency,
+        paidBy,
+        splits
+    } = parsedExpense.value
+
     try {
-        const amount = Number(expenseTotal)
-        if (!user || !groupId || !expenseDate || !expenseCurrency || !paidBy || !splits) return res.status(400).json({ status: "fail", message: "bad request" })
-        if (!expenseName || !amount || Number.isNaN(amount) || amount <= 0) return res.status(400).json({ status: "fail", message: 'Invalid expense amount' })
-        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: 'User not in group or No such group' })
-
-        const currDate = expenseDate ? expenseDate : new Date().toISOString().split('T')[0];
-
-        for (const payer of paidBy) {
-            let user = payer.userId
-            let amount = Number(payer.amount)
-            if (!user || amount < 0) return res.status(400).json({ status: "fail", message: "empty user or invalid amount" })
-            if (!(await hasUser(user))) return res.status(400).json({ status: "fail", message: "no user" })
-            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: "user not in group" })
+        if (!(await isUserAuthorised(user, groupId))) {
+            return sendFailure(
+                res,
+                403,
+                "FORBIDDEN",
+                "User not in group or No such group"
+            )
         }
 
-        for (const payer of splits) {
-            let user = payer.userId
-            let amount = Number(payer.amount)
-            if (!user || amount < 0) return res.status(400).json({ status: "fail", message: "empty user or invalid amount" })
-            if (!(await hasUser(user))) return res.status(400).json({ status: "fail", message: "no user" })
-            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ status: "fail", message: "user not in group" })
+        const participantIds = new Set([
+            ...paidBy.map(entry => entry.userId),
+            ...splits.map(entry => entry.userId)
+        ])
+        for (const participantId of participantIds) {
+            if (!(await isUserAuthorised(participantId, groupId))) {
+                return sendFailure(
+                    res,
+                    400,
+                    "VALIDATION_ERROR",
+                    "Expense participant is not a group member"
+                )
+            }
         }
 
-
-        const totalPaid = paidBy.reduce((sum: number, p: any) => sum + Number(p.amount), 0)
-        const totalSplit = splits.reduce((sum: number, s: any) => sum + Number(s.amount), 0)
-
-        if (totalPaid !== amount || totalSplit !== amount) {
-            return res.status(400).json({ status: "fail", message: "Paid/split amounts don't match total" })
-        }
-
-        await database.query('BEGIN')
-        // return expense id
-
-        const result = await database.query(
-            'INSERT INTO expenses (group_id, name, total, date, currency) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [groupId, expenseName, amount, currDate, expenseCurrency]
+        const group = await getGroupDetails(groupId)
+        const fxQuote = await getFxQuote(
+            expenseCurrency,
+            group.defaultCurrency
         )
 
-        const expenseId = result.rows[0].id
-
-        for (const payer of paidBy) {
-            let user = payer.userId
-            let amount = Number(payer.amount)
-            if (amount == 0) continue
-
-            await database.query(
-                `INSERT INTO payments (expense_id, user_id, amount) VALUES ($1, $2, $3)
-                ON CONFLICT (expense_id, user_id)
-                DO UPDATE SET amount = EXCLUDED.amount`,
-                [expenseId, user, amount]
+        const expenseId = await runInTransaction(async client => {
+            const result = await client.query(
+                'INSERT INTO expenses (group_id, name, total, date, currency) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                [
+                    groupId,
+                    expenseName,
+                    expenseTotal,
+                    expenseDate,
+                    expenseCurrency
+                ]
             )
-            console.log(`Added payer: ${user} amount:${amount}`)
-        }
 
-        for (const asignee of splits) {
-            let user = asignee.userId
-            let amount = Number(asignee.amount)
-            if (amount == 0) continue
+            const expenseId = result.rows[0].id
 
-            await database.query(
-                `INSERT INTO splits (expense_id, user_id, amount) VALUES ($1, $2, $3)
-                ON CONFLICT (expense_id, user_id)
-                DO UPDATE SET amount = EXCLUDED.amount`,
-                [expenseId, user, amount]
+            await client.query(
+                `INSERT INTO expense_fx_snapshots
+                    (
+                        expense_id,
+                        group_id,
+                        source_currency,
+                        target_currency,
+                        rate,
+                        provider,
+                        provider_effective_at,
+                        captured_at
+                    )
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
+                [
+                    expenseId,
+                    groupId,
+                    expenseCurrency,
+                    group.defaultCurrency,
+                    fxQuote.rate,
+                    fxQuote.provider,
+                    fxQuote.effectiveAt
+                ]
             )
-            console.log(`Added assignee: ${user} amount:${amount}`)
-        }
 
-        await database.query('COMMIT')
+            for (const payer of paidBy) {
+                const payerUserId = payer.userId
+                const payerAmount = payer.amount
+                if (payerAmount === 0) continue
 
-        return res.status(201).json({ status: 'success' })
+                await client.query(
+                    `INSERT INTO payments
+                        (expense_id, group_id, user_id, amount)
+                     VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (expense_id, user_id)
+                    DO UPDATE SET amount = EXCLUDED.amount`,
+                    [expenseId, groupId, payerUserId, payerAmount]
+                )
+            }
+
+            for (const assignee of splits) {
+                const assigneeUserId = assignee.userId
+                const assigneeAmount = assignee.amount
+                if (assigneeAmount === 0) continue
+
+                await client.query(
+                    `INSERT INTO splits
+                        (expense_id, group_id, user_id, amount)
+                     VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (expense_id, user_id)
+                    DO UPDATE SET amount = EXCLUDED.amount`,
+                    [expenseId, groupId, assigneeUserId, assigneeAmount]
+                )
+            }
+            return expenseId as string
+        })
+
+        return sendSuccess(res, 201, { expenseId })
     } catch (error) {
-        console.log(error)
-        return res.status(501).json({ status: "fail", message: 'Server error adding expense' })
-    }
-}
-
-export const addPayer = async (req: Request, res: Response) => {
-    console.log("adding payer")
-    const user = req.user.userId
-    const { expenseId, payers } = req.body
-    try {
-        if (!expenseId || !payers) return res.status(400).json({ error: "request error" })
-        if (await hasExpense(expenseId)) return res.status(400).json({ error: "expense do not exist" })
-
-        const groupId = await getGroupIdByExpense(expenseId)
-        if (!groupId) return res.status(400)
-
-        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: 'User not in group or No such group' })
-
-        // // payers = [userId, amount]
-        if (!(await isValidSplit(expenseId, payers))) return res.status(400).json({ error: "Payments don't match total" })
-
-        for (const payer of payers) {
-            let user = payer.userId
-            let amount = Number(payer.amount)
-
-            if (!user || amount < 0) return res.status(400).json({ error: "empty user or invalid amount" })
-            if (!(await hasUser(user))) return res.status(400).json({ error: "no user" })
-            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: "user not in group" })
-        }
-
-        for (const payer of payers) {
-            let user = payer.userId
-            let amount = Number(payer.amount)
-            if (amount == 0) continue
-
-            await database.query(
-                `INSERT INTO payments (expense_id, user_id, amount) VALUES ($1, $2, $3)
-                ON CONFLICT (expense_id, user_id)
-                DO UPDATE SET amount = EXCLUDED.amount`,
-                [expenseId, user, amount]
+        if (error instanceof FxUnavailableError) {
+            logger.warn("expense_fx_unavailable", {
+                operation: "add_expense",
+                groupId
+            }, error)
+            return sendFailure(
+                res,
+                503,
+                "FX_UNAVAILABLE",
+                "Exchange rate is unavailable"
             )
-            console.log(`Added payer: ${user} amount:${amount}`)
         }
-        return res.status(201).json({ message: 'success' })
-    } catch (error) {
-        console.log(error)
-        return res.status(501).json({ error: 'Server error adding payer' })
-    }
-}
-
-export const addSplit = async (req: Request, res: Response) => {
-    console.log("adding splits")
-    const user = req.user.userId
-    const { expenseId, splits } = req.body
-    try {
-        if (!expenseId || !splits) return res.status(400).json({ error: "request error" })
-        if (await hasExpense(expenseId)) return res.status(400).json({ error: "expense do not exist" })
-
-        const groupId = await getGroupIdByExpense(expenseId)
-        if (!groupId) return res.status(400)
-
-        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: 'User not in group or No such group' })
-
-        // // payers = [userId, amount]
-        if (!(await isValidSplit(expenseId, splits))) return res.status(400).json({ error: "Payments don't match total" })
-
-        for (const asignee of splits) {
-            let user = asignee.userId
-            let amount = Number(asignee.amount)
-
-            if (!user || amount < 0) return res.status(400).json({ error: "empty user or invalid amount" })
-            if (!(await hasUser(user))) return res.status(400).json({ error: "no user" })
-            if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: "user not in group" })
-        }
-
-        for (const asignee of splits) {
-            let user = asignee.userId
-            let amount = Number(asignee.amount)
-            if (amount == 0) continue
-
-            await database.query(
-                `INSERT INTO splits (expense_id, user_id, amount) VALUES ($1, $2, $3)
-                ON CONFLICT (expense_id, user_id)
-                DO UPDATE SET amount = EXCLUDED.amount`,
-                [expenseId, user, amount]
-            )
-            console.log(`Added assignee: ${user} amount:${amount}`)
-        }
-        return res.status(201).json({ message: 'success' })
-    } catch (error) {
-        console.log(error)
-        return res.status(501).json({ error: 'Server error adding splits' })
+        logger.error("expense_creation_failed", {
+            operation: "add_expense",
+            groupId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error adding expense"
+        )
     }
 }
 
 export const getExpenseList = async (req: Request, res: Response) => {
-    console.log("getting expense list")
     const user = req.user.userId
     const groupId = req.params.groupId as string
     try {
-        if (!groupId) return res.status(400).json({ error: "request error" })
-        if (!(await hasUser(user))) return res.status(400).json({ error: "no user" })
-        if (!(await isUserAuthorised(user, groupId))) return res.status(400).json({ error: "user not authorised or group do not exist" })
+        if (!groupId) {
+            return sendFailure(
+                res,
+                400,
+                "VALIDATION_ERROR",
+                "Invalid group"
+            )
+        }
+        if (!(await isUserAuthorised(user, groupId))) {
+            return sendFailure(
+                res,
+                403,
+                "FORBIDDEN",
+                "Forbidden"
+            )
+        }
 
         const expenses = await getExpenses(groupId)
-        // const { payments, splits } = await getSplits(expenses.expenseId)
         const mappedExpenses = expenses.map(e => ({
             expenseId: e.id,
             groupId: e.group_id,
             expenseName: e.name,
-            expenseTotal: e.total,
-            date: e.date,
-            createdAt: e.created_at,
+            expenseTotal: serializeMoney(e.total),
+            date: serializeDate(e.date),
+            createdAt: serializeTimestamp(e.created_at),
             currency: e.currency
         }))
-        return res.status(200).json({ status: "success", mappedExpenses })  //{expenseId: expenses.id, expenseName: expenses.name}
+        return sendSuccess(res, 200, { expenses: mappedExpenses })
     } catch (error) {
-        console.log(error)
-        return res.status(501).json({ error: 'Server error getting expenses' })
+        logger.error("expense_list_failed", {
+            operation: "list_expenses",
+            groupId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error getting expenses"
+        )
+    }
+}
+
+export const deleteExpense = async (req: Request, res: Response) => {
+    const groupId = req.params.groupId as string
+    const expenseId = req.params.expenseId as string
+    const userId = req.user.userId
+
+    if (!isUuid(groupId) || !isUuid(expenseId)) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid expense"
+        )
+    }
+
+    try {
+        if (!(await isUserAuthorised(userId, groupId))) {
+            return sendFailure(res, 403, "FORBIDDEN", "Forbidden")
+        }
+
+        const result = await database.query<{ id: string }>(
+            `DELETE FROM expenses
+             WHERE id = $1 AND group_id = $2
+             RETURNING id`,
+            [expenseId, groupId]
+        )
+        if (!result.rows[0]) {
+            return sendFailure(
+                res,
+                404,
+                "NOT_FOUND",
+                "Expense not found"
+            )
+        }
+
+        const data: DeleteExpenseData = {
+            expenseId: result.rows[0].id
+        }
+        return sendSuccess(res, 200, data)
+    } catch (error) {
+        logger.error("expense_deletion_failed", {
+            operation: "delete_expense",
+            groupId,
+            expenseId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error deleting expense"
+        )
     }
 }
