@@ -4,6 +4,7 @@ import Brand from "../components/Brand"
 import EmailInput from "../components/EmailInput"
 import PasswordInput from "../components/PasswordInput"
 import { logIn } from "../api/auth"
+import { apiErrorMessage } from "../api/client"
 
 function LogInPage() {
     const navigate = useNavigate()
@@ -15,24 +16,25 @@ function LogInPage() {
 
     async function handleSubmit(event: FormEvent) {
         event.preventDefault()
+        if (submitting) return
         setSubmitting(true)
         setErrorMessage("")
         try {
-            const data = await logIn(email, password)
-            if (data.status === "success") {
-                const pendingInvite = localStorage.getItem("pendingInvite")
-                if (pendingInvite) {
-                    localStorage.removeItem("pendingInvite")
-                    navigate(`/join/${pendingInvite}`)
-                } else {
-                    const requestedPath = (location.state as { from?: string } | null)?.from
-                    navigate(requestedPath || "/")
-                }
+            await logIn(email, password)
+            const pendingInvite = localStorage.getItem("pendingInvite")
+            if (pendingInvite) {
+                navigate(`/join/${pendingInvite}`)
             } else {
-                setErrorMessage(data.message || "Incorrect email or password.")
+                const requestedPath = (
+                    location.state as { from?: string } | null
+                )?.from
+                navigate(requestedPath || "/")
             }
-        } catch {
-            setErrorMessage("Unable to sign in right now.")
+        } catch (error) {
+            setErrorMessage(apiErrorMessage(
+                error,
+                "Unable to sign in right now."
+            ))
         } finally {
             setSubmitting(false)
         }
@@ -50,7 +52,7 @@ function LogInPage() {
                 </header>
                 <EmailInput value={email} onChange={setEmail} />
                 <PasswordInput value={password} onChange={setPassword} />
-                {errorMessage && <div className="notice error small">{errorMessage}</div>}
+                {errorMessage && <div className="notice error small" role="alert">{errorMessage}</div>}
                 <button className="button primary full" disabled={!email || !password || submitting}>
                     {submitting ? "Signing in…" : "Sign in"}
                 </button>

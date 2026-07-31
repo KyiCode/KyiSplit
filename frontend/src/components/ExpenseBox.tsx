@@ -1,18 +1,31 @@
 import type { ExpenseType } from '../interfaces/interface'
 
-function ExpenseBox({ expense }: { expense: ExpenseType }) {
-    const amount = new Intl.NumberFormat("en", {
-        style: "currency",
-        currency: expense.currency || "SGD"
-    }).format(Number(expense.expenseTotal))
-    const date = new Intl.DateTimeFormat("en", {
+function ExpenseBox({
+    expense,
+    onSelect
+}: {
+    expense: ExpenseType
+    onSelect: (expense: ExpenseType) => void
+}) {
+    const currency = expense.currency || "SGD"
+    const amount = `${currency} ${Number(expense.expenseTotal).toFixed(2)}`
+    const date = new Date(`${expense.date}T00:00:00.000Z`)
+    const day = new Intl.DateTimeFormat("en", {
         day: "numeric",
-        month: "short"
-    }).format(new Date(expense.date))
-    const [day, month] = date.split(" ")
+        timeZone: "UTC"
+    }).format(date)
+    const month = new Intl.DateTimeFormat("en", {
+        month: "short",
+        timeZone: "UTC"
+    }).format(date)
 
     return (
-        <article className="expense-row">
+        <button
+            type="button"
+            className="expense-row"
+            aria-label={`View details for ${expense.expenseName}`}
+            onClick={() => onSelect(expense)}
+        >
             <div className="expense-date">
                 <span>{month}</span>
                 <strong>{day}</strong>
@@ -23,9 +36,9 @@ function ExpenseBox({ expense }: { expense: ExpenseType }) {
             </div>
             <div className="expense-amount">
                 <strong>{amount}</strong>
-                <small>{expense.currency || "SGD"}</small>
+                <small>Original amount</small>
             </div>
-        </article>
+        </button>
     )
 }
 

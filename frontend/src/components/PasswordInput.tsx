@@ -19,7 +19,12 @@ function PasswordInput({ value, onChange }: PasswordInputProp) {
                     placeholder="At least 8 characters"
                     onChange={(e) => onChange(e.target.value)}
                 />
-                <button className="text-button" type="button" onClick={() => setHidePassword(!hidePassword)}>
+                <button
+                    aria-label={hidePassword ? "Show password" : "Hide password"}
+                    className="text-button"
+                    type="button"
+                    onClick={() => setHidePassword(!hidePassword)}
+                >
                     {hidePassword ? "Show" : "Hide"}
                 </button>
             </span>

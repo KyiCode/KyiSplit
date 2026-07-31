@@ -15,7 +15,9 @@ function GroupBox({ group, onEnterGroup }: { group: Group, onEnterGroup: (groupI
                 </span>
                 <span className="group-copy">
                     <strong>{group.groupName}</strong>
-                    <small>{group.groupMembers.length} {group.groupMembers.length === 1 ? "member" : "members"}</small>
+                    <small>
+                        {group.defaultCurrency} · {group.groupMembers.length} {group.groupMembers.length === 1 ? "member" : "members"}
+                    </small>
                 </span>
                 <span className="arrow" aria-hidden="true">→</span>
             </button>

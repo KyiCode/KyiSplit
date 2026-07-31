@@ -1,29 +1,35 @@
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+import { apiRequest } from "./client"
+import type {
+    CredentialsRequest,
+    LoginData,
+    MessageData,
+    SessionData
+} from "../../../backend/src/contracts/api"
 
 export async function signUp(email: string, password: string) {
-    const lowerEmail = email.toLowerCase()
-    const response = await fetch(`${BASE_URL}/api/users/signup`, {
+    const body: CredentialsRequest = { email, password }
+    return apiRequest<MessageData>("/api/users/signup", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lowerEmail, password })
+        body: JSON.stringify(body)
     })
-    return response.json()
 }
 
 export async function logIn(email: string, password: string) {
-    const lowerEmail = email.toLowerCase()
-    const res = await fetch(`${BASE_URL}/api/users/login`, {
+    const body: CredentialsRequest = { email, password }
+    return apiRequest<LoginData>("/api/users/login", {
         method: 'POST',
-        credentials: "include",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lowerEmail, password })
+        body: JSON.stringify(body)
     })
-    return res.json()
 }
 
 export async function verifySession() {
-    const res = await fetch(`${BASE_URL}/api/users/verifysession`, {
-        credentials:"include"
+    return apiRequest<SessionData>("/api/users/verifysession")
+}
+
+export async function logOut() {
+    return apiRequest<Record<string, never>>("/api/users/logout", {
+        method: "POST"
     })
-    return res.json()
 }

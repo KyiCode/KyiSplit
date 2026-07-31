@@ -1,9 +1,12 @@
 import express from 'express'
 
-import { addExpense, addPayer, addSplit, getExpenseList } from '../controllers/expenseController'
+import {
+    addExpense,
+    deleteExpense,
+    getExpenseList
+} from '../controllers/expenseController'
 
 import authMiddleware from '../middleware/authMiddleware'
-import { getGroupList } from '../controllers/groupController'
 
 
 const router = express.Router()
@@ -11,12 +14,9 @@ const router = express.Router()
 router.use(authMiddleware)
 
 router.post("/addexpense", addExpense)
-router.post("/addpayer", addPayer)
-router.post("/addsplit", addSplit)
-
-// router.delete('/deleteexpense')
 
 router.get("/:groupId", getExpenseList)
+router.delete("/:groupId/:expenseId", deleteExpense)
 
 
 export default router

@@ -42,11 +42,23 @@ directories. Configure these variables before starting the application:
 | Backend | `BCRYPT_SALT` | Password-hashing cost |
 | Backend | `FRONTEND_URL` | Browser origin used when creating invitation URLs |
 | Backend | `NODE_ENV` | Runtime environment and cookie-security mode |
+| Backend | `LOG_LEVEL` | Logging threshold: `debug`, `info`, `warn`, `error`, or `silent` |
 | Frontend | `VITE_BASE_URL` | Backend origin used by browser API requests |
 
-Do not commit credentials or secret values. The current database description in
-[`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) is context only
-and must not be executed as a migration.
+Do not commit credentials or secret values.
+
+## Database Schema
+
+KyiSplit does not include or run database migrations. Database changes are
+performed manually by the database owner, and application startup never
+creates or alters schema objects.
+
+The consolidated schema the application expects is documented in
+[`roadmap/schema-reference.sql`](roadmap/schema-reference.sql). Treat that file
+as a target-state reference, not as an incremental or production-safe update
+script. Before changing a populated database, take a backup, compare its
+current schema and data with the reference, and apply the required changes
+manually in an appropriate transaction.
 
 ## Run Locally
 
@@ -63,6 +75,34 @@ npm.cmd --prefix frontend run dev
 The frontend is available at `http://localhost:5173`, and the backend listens on
 `http://localhost:5001`.
 
+## Backend Logging
+
+The backend writes one structured JSON record per line. Startup, database
+connectivity, request completion, controller failures, shutdown signals, and
+unexpected process failures use stable event names. Set `LOG_LEVEL=debug` for
+the most detail during local diagnosis; the default is `info` (`silent` during
+tests).
+
+Every request receives an `X-Request-Id` response header. Use that value to
+find its `request_started`, `request_completed`, and any operation-specific
+failure records. Logs include the matched route pattern rather than the raw URL
+so invitation tokens are not captured.
+
+The logger redacts sensitive keys and does not record request or response
+bodies, passwords, password hashes, cookies, JWTs, authorization headers,
+invitation tokens, SQL values, or database connection strings. PostgreSQL
+errors retain safe fields such as `code`, `constraint`, `table`, and `schema`.
+
+For a local failure:
+
+1. Copy `X-Request-Id` from the browser response.
+2. Find records with the same `requestId` in the backend terminal.
+3. Inspect the operation event and safe error metadata while leaving the API's
+   generic error response unchanged.
+
+Application logging is part of Phase 03. Production log transport, retention,
+monitoring, and alerting remain Phase 04 work.
+
 ## Verification
 
 Run the checks relevant to the subsystem you changed:
@@ -77,8 +117,7 @@ npm.cmd --prefix frontend run build
 ```
 
 The backend test command includes production and test TypeScript checks. A
-frontend automated test suite, database migration validation, integration
-tests, and end-to-end tests have not been added yet.
+frontend automated test suite and end-to-end suite have not been added yet.
 
 ## Repository Layout
 
@@ -91,6 +130,5 @@ roadmap/   Release decisions, phased plans, and schema context
 ## Current Limitations
 
 - The application is pre-release and intended only for development.
-- Database migrations are not checked in yet.
 - Frontend, integration, and end-to-end test suites are not available yet.
 - Production packaging and same-origin deployment are roadmap work.

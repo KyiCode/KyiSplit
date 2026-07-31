@@ -5,7 +5,8 @@ import DatePicker from "../components/DatePicker"
 import Modal from "../components/Modal"
 import PageShell from "../components/PageShell"
 import { createExpense } from "../api/expenses"
-import { fetchGroupMembers } from "../api/groups"
+import { fetchGroup, fetchGroupMembers } from "../api/groups"
+import { ApiError, apiErrorMessage } from "../api/client"
 import type { CurrencyType, GroupMemberType } from "../interfaces/interface"
 
 const today = new Date().toISOString().split("T")[0]
@@ -15,6 +16,8 @@ function AddExpensePage() {
     const navigate = useNavigate()
     const [groupMembers, setGroupMembers] = useState<GroupMemberType[]>([])
     const [membersLoading, setMembersLoading] = useState(true)
+    const [membersAttempt, setMembersAttempt] = useState(0)
+    const [accessDenied, setAccessDenied] = useState(false)
     const [showCurrencyPicker, setShowCurrencyPicker] = useState(false)
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
@@ -28,14 +31,36 @@ function AddExpensePage() {
     useEffect(() => {
         if (!groupId) return
         let active = true
-        fetchGroupMembers(groupId)
-            .then(data => {
-                if (active && Array.isArray(data)) setGroupMembers(data)
+        Promise.all([
+            fetchGroup(groupId),
+            fetchGroupMembers(groupId)
+        ])
+            .then(([group, members]) => {
+                if (active) {
+                    setAccessDenied(false)
+                    setErrorMessage("")
+                    setGroupMembers(members)
+                    setExpenseCurrency(current => current ?? {
+                        currencyIso: group.defaultCurrency,
+                        currencyName: `${group.defaultCurrency} group currency`
+                    })
+                }
             })
-            .catch(() => active && setErrorMessage("Unable to load group members."))
+            .catch(error => {
+                if (!active) return
+                if (error instanceof ApiError && error.status === 403) {
+                    setAccessDenied(true)
+                    setGroupMembers([])
+                } else {
+                    setErrorMessage(apiErrorMessage(
+                        error,
+                        "Unable to load group members."
+                    ))
+                }
+            })
             .finally(() => active && setMembersLoading(false))
         return () => { active = false }
-    }, [groupId])
+    }, [groupId, membersAttempt])
 
     const total = Number(expenseTotal)
     const paidTotal = useMemo(
@@ -90,7 +115,7 @@ function AddExpensePage() {
         setSubmitting(true)
         setErrorMessage("")
         try {
-            const data = await createExpense(
+            await createExpense(
                 groupId,
                 expenseName.trim(),
                 expenseTotal,
@@ -99,10 +124,16 @@ function AddExpensePage() {
                 amountPaid,
                 amountSplit
             )
-            if (data.status === "success") navigate(`/group/${groupId}`)
-            else setErrorMessage(data.message || "Unable to add this expense.")
-        } catch {
-            setErrorMessage("Unable to add this expense right now.")
+            navigate(`/group/${groupId}`)
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 403) {
+                setAccessDenied(true)
+            } else {
+                setErrorMessage(apiErrorMessage(
+                    error,
+                    "Unable to add this expense right now."
+                ))
+            }
         } finally {
             setSubmitting(false)
         }
@@ -110,6 +141,24 @@ function AddExpensePage() {
 
     if (!groupId) {
         return <div className="fatal-state">This expense link is missing a group.</div>
+    }
+
+    if (accessDenied) {
+        return (
+            <PageShell>
+                <section className="empty-state">
+                    <span className="empty-mark">!</span>
+                    <h1>Group access denied</h1>
+                    <p>You cannot add expenses to this group.</p>
+                    <button
+                        className="button secondary"
+                        onClick={() => navigate("/")}
+                    >
+                        Return to your groups
+                    </button>
+                </section>
+            </PageShell>
+        )
     }
 
     return (
@@ -135,15 +184,19 @@ function AddExpensePage() {
                                 <span>Description</span>
                                 <input value={expenseName} onChange={event => setExpenseName(event.target.value)} placeholder="Dinner at Burnt Ends" />
                             </label>
-                            <label className="field amount-field">
-                                <span>Total amount</span>
+                            <div className="field amount-field">
+                                <label htmlFor="expense-total">Total amount</label>
                                 <span className="amount-input-wrap">
-                                    <button type="button" onClick={() => setShowCurrencyPicker(true)}>
+                                    <button
+                                        aria-label={`Expense currency: ${expenseCurrency?.currencyIso || "not selected"}. Change currency`}
+                                        type="button"
+                                        onClick={() => setShowCurrencyPicker(true)}
+                                    >
                                         {expenseCurrency?.currencyIso || "CUR"}
                                     </button>
-                                    <input type="number" min="0" step="0.01" value={expenseTotal} onChange={event => setExpenseTotal(event.target.value)} placeholder="0.00" />
+                                    <input id="expense-total" type="number" min="0" step="0.01" value={expenseTotal} onChange={event => setExpenseTotal(event.target.value)} placeholder="0.00" />
                                 </span>
-                            </label>
+                            </div>
                             <label className="field">
                                 <span>Date</span>
                                 <DatePicker value={expenseDate} onChange={setExpenseDate} />
@@ -169,6 +222,7 @@ function AddExpensePage() {
                             loading={membersLoading}
                             onChange={(userId, value) => updateAmount(setAmountPaid, userId, value)}
                             actionLabel="Paid all"
+                            amountKind="paid"
                             onAction={assignSinglePayer}
                         />
                     </section>
@@ -188,6 +242,7 @@ function AddExpensePage() {
                             currency={expenseCurrency?.currencyIso}
                             loading={membersLoading}
                             onChange={(userId, value) => updateAmount(setAmountSplit, userId, value)}
+                            amountKind="split"
                         />
                         <div className="split-summary">
                             <span>Assigned</span>
@@ -210,7 +265,22 @@ function AddExpensePage() {
                         <li className={basicsReady && Math.abs(paidTotal - total) < 0.005 ? "done" : ""}><span /> Payers balance</li>
                         <li className={basicsReady && Math.abs(splitTotal - total) < 0.005 ? "done" : ""}><span /> Split balances</li>
                     </ul>
-                    {errorMessage && <div className="notice error small">{errorMessage}</div>}
+                    {errorMessage && (
+                        <div className="notice error small" role="alert">{errorMessage}</div>
+                    )}
+                    {errorMessage && groupMembers.length === 0 && (
+                        <button
+                            className="button secondary full"
+                            onClick={() => {
+                                setErrorMessage("")
+                                setMembersLoading(true)
+                                setAccessDenied(false)
+                                setMembersAttempt(value => value + 1)
+                            }}
+                        >
+                            Retry loading members
+                        </button>
+                    )}
                     <button className="button primary full large" disabled={!canSubmit} onClick={handleAddExpense}>
                         {submitting ? "Adding expense…" : "Add expense"}
                     </button>
@@ -219,7 +289,10 @@ function AddExpensePage() {
             </div>
 
             {showCurrencyPicker && (
-                <Modal onClose={() => setShowCurrencyPicker(false)}>
+                <Modal
+                    ariaLabel="Choose expense currency"
+                    onClose={() => setShowCurrencyPicker(false)}
+                >
                     <CurrencyPicker onSelect={currency => {
                         setExpenseCurrency(currency)
                         setShowCurrencyPicker(false)
@@ -237,7 +310,8 @@ function MemberAmounts({
     loading,
     onChange,
     actionLabel,
-    onAction
+    onAction,
+    amountKind
 }: {
     members: GroupMemberType[]
     values: Record<string, string>
@@ -246,8 +320,17 @@ function MemberAmounts({
     onChange: (userId: string, value: string) => void
     actionLabel?: string
     onAction?: (userId: string) => void
+    amountKind: "paid" | "split"
 }) {
-    if (loading) return <div className="skeleton-list"><span /><span /></div>
+    if (loading) return (
+        <div
+            className="skeleton-list"
+            role="status"
+            aria-label="Loading group members"
+        >
+            <span /><span />
+        </div>
+    )
 
     return (
         <div className="member-amount-list">
@@ -256,12 +339,19 @@ function MemberAmounts({
                     <span className="person-avatar">{member.userGroupName.slice(0, 1).toUpperCase()}</span>
                     <strong>{member.userGroupName}</strong>
                     {actionLabel && onAction && (
-                        <button className="text-button payer-shortcut" type="button" onClick={() => onAction(member.userId)}>{actionLabel}</button>
+                        <button
+                            aria-label={`${actionLabel} for ${member.userGroupName}`}
+                            className="text-button payer-shortcut"
+                            type="button"
+                            onClick={() => onAction(member.userId)}
+                        >
+                            {actionLabel}
+                        </button>
                     )}
                     <label className="mini-amount">
                         <span>{currency || "—"}</span>
                         <input
-                            aria-label={`${member.userGroupName} amount`}
+                            aria-label={`${member.userGroupName} ${amountKind} amount`}
                             type="number"
                             min="0"
                             step="0.01"

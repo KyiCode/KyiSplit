@@ -4,12 +4,14 @@ import AddGroup from "../components/AddGroup"
 import GroupList from "../components/GroupList"
 import PageShell from "../components/PageShell"
 import { createGroup, fetchGroup, fetchGroups } from "../api/groups"
+import { ApiError, apiErrorMessage } from "../api/client"
 import type { Group } from "../interfaces/interface"
 
 function MainPage() {
     const [groups, setGroups] = useState<Group[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
+    const [loadAttempt, setLoadAttempt] = useState(0)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -17,37 +19,55 @@ function MainPage() {
         fetchGroups()
             .then(data => {
                 if (!active) return
-                if (data.status === "success") setGroups(data.groupDetails)
-                else setError(data.message || "Unable to load your groups.")
+                setError("")
+                setGroups(data.groups)
             })
-            .catch(() => active && setError("We couldn't load your groups. Is the server running?"))
+            .catch(error => {
+                if (active) {
+                    setError(apiErrorMessage(
+                        error,
+                        "We couldn't load your groups."
+                    ))
+                }
+            })
             .finally(() => active && setLoading(false))
         return () => { active = false }
-    }, [])
+    }, [loadAttempt])
 
     async function refreshGroups() {
         const data = await fetchGroups()
-        if (data.status === "success") setGroups(data.groupDetails)
+        setGroups(data.groups)
     }
 
-    async function handleAddGroup(groupName: string, groupUserName: string) {
+    async function handleAddGroup(
+        groupName: string,
+        groupUserName: string,
+        defaultCurrency: string
+    ) {
         setError("")
         try {
-            const data = await createGroup(groupName, groupUserName)
-            if (data.status === "success") await refreshGroups()
-            else setError(data.message || "Unable to create that group.")
-        } catch {
-            setError("Unable to create that group right now.")
+            await createGroup(groupName, groupUserName, defaultCurrency)
+            await refreshGroups()
+            return true
+        } catch (error) {
+            setError(apiErrorMessage(
+                error,
+                "Unable to create that group right now."
+            ))
+            return false
         }
     }
 
     async function onEnterGroup(groupId: string) {
         try {
-            const data = await fetchGroup(groupId)
-            if (data.status === "success") navigate(`/group/${groupId}`)
-            else setError("You no longer have access to that group.")
-        } catch {
-            setError("Unable to open that group.")
+            await fetchGroup(groupId)
+            navigate(`/group/${groupId}`)
+        } catch (error) {
+            setError(
+                error instanceof ApiError && error.status === 403
+                    ? "You no longer have access to that group."
+                    : apiErrorMessage(error, "Unable to open that group.")
+            )
         }
     }
 
@@ -58,7 +78,18 @@ function MainPage() {
                 <p>Your shared expenses.</p>
             </section>
 
-            {error && <div className="notice error">{error}</div>}
+            {error && (
+                <div className="notice error" role="alert">
+                    <span>{error}</span>
+                    <button onClick={() => {
+                        setLoading(true)
+                        setError("")
+                        setLoadAttempt(value => value + 1)
+                    }}>
+                        Try again
+                    </button>
+                </div>
+            )}
 
             <section className="dashboard-grid compact-dashboard">
                 <div className="groups-panel">
@@ -68,7 +99,7 @@ function MainPage() {
                     </div>
 
                     {loading ? (
-                        <div className="skeleton-list" aria-label="Loading groups">
+                        <div className="skeleton-list" role="status" aria-label="Loading groups">
                             <span />
                             <span />
                             <span />
