@@ -52,16 +52,16 @@ As inspected on 2026-07-29:
 | --- | --- | --- | --- |
 | 01 — Stabilize Core | Current flows are secure, transactional, and predictable | [Detailed plan](phase01-stabilize-core/README.md) | Complete |
 | 02 — Data and API Foundation | Constraints, contracts, FX, and settlements are authoritative | [Detailed plan](phase02-data-api-foundation/README.md) | Complete |
-| 03 — Complete Product | Full browser workflow from signup through repayment | [Detailed plan](phase03-complete-product/README.md) | In progress |
-| 04 — Release Operations | Accessibility and critical browser verification precede release operations | [Carried-forward tasks](phase04-release-operations/README.md) | Not started |
+| 03 — Complete Product | Full browser workflow from signup through repayment | [Detailed plan](phase03-complete-product/README.md) | Complete |
+| 04 — Release Operations | Accessibility and critical browser verification precede release operations | [Carried-forward tasks](phase04-release-operations/README.md) | In progress |
 
 Work on one phase at a time. A phase may be marked complete only after all of
 its exit criteria pass. When implementation reveals a necessary change to a
 later phase, update the affected roadmap file in the same change and explain
 why.
 
-Phase 03 is the single active phase. Its
-[`CURRENT_TASK.md`](phase03-complete-product/CURRENT_TASK.md) identifies the
+Phase 04 is the single active phase. Its
+[`CURRENT_TASK.md`](phase04-release-operations/CURRENT_TASK.md) identifies the
 next implementation task.
 
 ## Release-Level Phase Outline

@@ -85,7 +85,7 @@ marked `(done)` only after its acceptance criteria and verification pass.
 | [05 — Present balances and settlements](task05-present-balances-settlements.md) (done) | Frontend | 5 | Members can understand deterministic balances and suggestions |
 | [06 — Complete the repayment experience](task06-complete-repayment-experience.md) (done) | Frontend | 5 | Members can record, review, and correct repayments |
 | [07 — Harden the core browser journeys](task07-harden-core-browser-journeys.md) (done) | Frontend | 3 | Auth, invite, group, currency, and expense journeys recover predictably |
-| [08 — Establish comprehensive backend logging](task08-establish-backend-logging.md) | Backend | 5 | Failures are correlated and diagnosable without exposing secrets |
+| [08 — Establish comprehensive backend logging](task08-establish-backend-logging.md) (done) | Backend | 5 | Failures are correlated and diagnosable without exposing secrets |
 
 Total: 34 points.
 

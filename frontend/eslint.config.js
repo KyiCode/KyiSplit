@@ -20,7 +20,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    files: ['test/**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,

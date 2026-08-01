@@ -1,4 +1,4 @@
 # Current Task
 
-Implement
-[`task08-establish-backend-logging.md`](task08-establish-backend-logging.md).
+Phase 03 is complete. Continue with
+[`../phase04-release-operations/CURRENT_TASK.md`](../phase04-release-operations/CURRENT_TASK.md).

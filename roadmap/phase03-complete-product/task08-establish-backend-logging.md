@@ -2,7 +2,7 @@
 
 - Story points: 5
 - Area: Backend
-- Status: In progress
+- Status: Done
 - Dependencies: Task 07
 
 ## Goal
@@ -69,7 +69,11 @@ that no credentials, cookies, tokens, request bodies, or database URLs appear.
 - A controlled `EADDRINUSE` startup failure produced structured configuration,
   database-connectivity, startup-failure, and shutdown records with the real
   error code and no configured secrets.
-- Successful-request and validation-failure runtime checks remain pending
-  because another intermittent listener is occupying port 5001 and does not
-  expose the new correlation header. Task 08 remains in progress until those
-  checks run against only the updated backend process.
+- An isolated runtime check against the updated backend produced distinct
+  configuration-validation, database-connectivity, listener-readiness, and
+  deterministic-shutdown records.
+- Successful and validation-failure requests returned the supplied
+  `X-Request-Id` values and produced matching `request_started` and
+  `request_completed` records with matched routes, statuses, and elapsed time.
+- Captured startup and request records contained no credentials, cookies,
+  tokens, request bodies, or database URLs.
