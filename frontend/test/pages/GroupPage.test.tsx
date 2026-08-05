@@ -108,6 +108,22 @@ test('presents stored expense detail and the correction policy', async () => {
   )).toBeInTheDocument()
 })
 
+test('exposes activity and members as named lists', async () => {
+  installFetchQueue(...initialResponses())
+  renderGroup()
+
+  const activity = await screen.findByRole('list', {
+    name: 'Recent expenses',
+  })
+  expect(within(activity).getAllByRole('listitem')).toHaveLength(1)
+  expect(within(activity).getByRole('button', {
+    name: 'View details for Dinner',
+  })).toBeInTheDocument()
+
+  const members = screen.getByRole('list', { name: 'Group members' })
+  expect(within(members).getAllByRole('listitem')).toHaveLength(3)
+})
+
 test('cancels confirmation with the button or Escape and keeps the row', async () => {
   const user = userEvent.setup()
   installFetchQueue(...initialResponses())

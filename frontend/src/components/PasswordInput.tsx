@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 
 type PasswordInputProp = {
     value: string
@@ -7,12 +7,14 @@ type PasswordInputProp = {
 
 function PasswordInput({ value, onChange }: PasswordInputProp) {
     const [hidePassword, setHidePassword] = useState(true)
+    const inputId = useId()
 
     return (
-        <label className="field">
-            <span>Password</span>
+        <div className="field">
+            <label htmlFor={inputId}>Password</label>
             <span className="password-wrap">
                 <input
+                    id={inputId}
                     value={value}
                     type={hidePassword ? "password" : "text"}
                     autoComplete="current-password"
@@ -28,7 +30,7 @@ function PasswordInput({ value, onChange }: PasswordInputProp) {
                     {hidePassword ? "Show" : "Hide"}
                 </button>
             </span>
-        </label>
+        </div>
     )
 }
 

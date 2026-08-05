@@ -1,5 +1,7 @@
 import { logger } from "../logging/logger"
 
+type Environment = Record<string, string | undefined>
+
 export interface FxQuote {
     rate: string
     provider: string
@@ -58,7 +60,8 @@ export function validateFxQuote(value: FxQuote): FxQuote {
 
 export async function getFxQuote(
     base: string,
-    target: string
+    target: string,
+    environment: Environment = process.env
 ): Promise<FxQuote> {
     if (base === target) {
         return {
@@ -69,8 +72,12 @@ export async function getFxQuote(
     }
 
     try {
+        const providerUrl = (
+            environment.RATE_PROVIDER_URL ||
+            "https://api.frankfurter.dev"
+        ).replace(/\/+$/, "")
         const response = await fetch(
-            `https://api.frankfurter.dev/v2/rate/${base}/${target}`
+            `${providerUrl}/v2/rate/${base}/${target}`
         )
         if (!response.ok) throw new FxUnavailableError()
 

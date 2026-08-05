@@ -3,7 +3,9 @@ import type {
     SuccessResponse
 } from "../../../backend/src/contracts/api"
 
-const BASE_URL = import.meta.env.VITE_BASE_URL || ""
+const BASE_URL = import.meta.env.PROD
+    ? ""
+    : import.meta.env.VITE_BASE_URL || ""
 
 type ErrorPayload = Partial<FailureResponse>
 

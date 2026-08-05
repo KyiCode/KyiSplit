@@ -2,7 +2,7 @@
 
 - Story points: 5
 - Area: Integration
-- Status: Planned
+- Status: Complete
 - Dependencies: Task 02
 
 ## Goal
@@ -42,3 +42,24 @@ npm.cmd --prefix frontend run lint
 npm.cmd --prefix frontend run build
 npm.cmd --prefix frontend run test:e2e
 ```
+
+## Verification Result
+
+Verified on 2026-08-04:
+
+- `npm.cmd --prefix backend test` passed (22 files, 178 tests).
+- `npm.cmd --prefix frontend test` passed (15 files, 60 tests).
+- Frontend lint and production build passed.
+- `npm.cmd --prefix frontend run test:e2e` passed in the normal and deliberately
+  shuffled failure-scenario order (9 tests each).
+- `npm.cmd --prefix frontend run test:e2e -- --repeat-each=2` passed (16 tests).
+- Cleanup left no listeners on the four E2E ports, disposable database run
+  directories, or run-state file.
+
+The sanitized browser regression covered three distinct accounts, logout and
+invite continuation, reuse of one invite, a non-SGD group, deterministic
+cross-currency balances, settlement suggestions, repayment history, confirmed
+expense and repayment deletion, expired-invite handling, cross-group denial,
+unauthenticated-route restoration, provider rollback, and transient-request
+retry. No credentials, cookies, invitation tokens, or database configuration
+values are recorded here.

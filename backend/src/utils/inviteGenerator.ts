@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import database from "../db"
+import { readAppOrigin } from "../config"
 
 export const INVITE_DURATION_MS = 60 * 60 * 1000
 
@@ -16,11 +17,6 @@ export async function generateInvite(
      VALUES ($1, $2, $3, $4)`,
         [groupId, token, userId, expiresAt]
     )
-    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/+$/, "")
-    if (!frontendUrl) {
-        throw new Error("FRONTEND_URL must be configured")
-    }
-
-    const inviteLink = `${frontendUrl}/join/${token}`
+    const inviteLink = `${readAppOrigin()}/join/${token}`
     return inviteLink
 }

@@ -43,6 +43,25 @@ describe("FX provider", () => {
         )
     })
 
+    it("uses an explicitly configured provider endpoint", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({
+                rate: 1.35,
+                date: "2026-07-30"
+            })
+        })
+        vi.stubGlobal("fetch", fetchMock)
+
+        await getFxQuote("USD", "SGD", {
+            RATE_PROVIDER_URL: "http://127.0.0.1:5512"
+        })
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            "http://127.0.0.1:5512/v2/rate/USD/SGD"
+        )
+    })
+
     it.each([
         [{ ok: false, json: vi.fn() }],
         [{ ok: true, json: vi.fn().mockResolvedValue({}) }],

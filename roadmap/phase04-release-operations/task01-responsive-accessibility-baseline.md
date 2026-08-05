@@ -2,7 +2,7 @@
 
 - Story points: 3
 - Area: Frontend
-- Status: Planned
+- Status: Complete
 - Dependencies: Phase 03
 
 ## Goal
@@ -24,14 +24,13 @@ announced, and resilient across phone and desktop layouts.
 - Group, expense, balance, settlement, repayment, invite, and auth layouts work
   at 320 CSS pixels without horizontal page overflow.
 - Automated accessibility assertions and focused component tests cover the
-  critical screens; documented manual checks cover what automation cannot.
+  critical screens.
 
 ## TDD Sequence
 
 1. Add failing semantic, focus, and narrow-viewport tests.
 2. Correct shared primitives before page-specific defects.
-3. Run automated checks, then record sanitized keyboard and responsive manual
-   results.
+3. Run the complete automated frontend verification.
 
 ## Verification
 

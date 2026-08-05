@@ -79,7 +79,9 @@ function AddExpensePage() {
         expenseCurrency &&
         expenseDate
     )
-    const totalsMatch = Math.abs(paidTotal - total) < 0.005 && Math.abs(splitTotal - total) < 0.005
+    const payersReady = basicsReady && Math.abs(paidTotal - total) < 0.005
+    const splitReady = basicsReady && Math.abs(splitTotal - total) < 0.005
+    const totalsMatch = payersReady && splitReady
     const canSubmit = basicsReady && totalsMatch && groupMembers.length > 0 && !submitting
 
     function updateAmount(
@@ -211,7 +213,7 @@ function AddExpensePage() {
                                 <h2>Who paid?</h2>
                                 <p>Pick one person or combine payments.</p>
                             </div>
-                            <span className={`total-pill ${basicsReady && Math.abs(paidTotal - total) < 0.005 ? "complete" : ""}`}>
+                            <span className={`total-pill ${payersReady ? "complete" : ""}`}>
                                 {paidTotal.toFixed(2)} / {total > 0 ? total.toFixed(2) : "0.00"}
                             </span>
                         </div>
@@ -246,7 +248,7 @@ function AddExpensePage() {
                         />
                         <div className="split-summary">
                             <span>Assigned</span>
-                            <strong className={basicsReady && Math.abs(splitTotal - total) < 0.005 ? "success-text" : ""}>
+                            <strong className={splitReady ? "success-text" : ""}>
                                 {expenseCurrency?.currencyIso || "—"} {splitTotal.toFixed(2)} / {total > 0 ? total.toFixed(2) : "0.00"}
                             </strong>
                         </div>
@@ -260,10 +262,19 @@ function AddExpensePage() {
                         <span>{expenseCurrency?.currencyIso || "Currency"}</span>
                         <strong>{total > 0 ? total.toFixed(2) : "0.00"}</strong>
                     </div>
-                    <ul className="review-list">
-                        <li className={basicsReady ? "done" : ""}><span /> Details complete</li>
-                        <li className={basicsReady && Math.abs(paidTotal - total) < 0.005 ? "done" : ""}><span /> Payers balance</li>
-                        <li className={basicsReady && Math.abs(splitTotal - total) < 0.005 ? "done" : ""}><span /> Split balances</li>
+                    <ul className="review-list" aria-label="Expense readiness">
+                        <li className={basicsReady ? "done" : ""}>
+                            <span aria-hidden="true" />
+                            Details {basicsReady ? "complete" : "incomplete"}
+                        </li>
+                        <li className={payersReady ? "done" : ""}>
+                            <span aria-hidden="true" />
+                            Payers {payersReady ? "complete" : "incomplete"}
+                        </li>
+                        <li className={splitReady ? "done" : ""}>
+                            <span aria-hidden="true" />
+                            Split {splitReady ? "complete" : "incomplete"}
+                        </li>
                     </ul>
                     {errorMessage && (
                         <div className="notice error small" role="alert">{errorMessage}</div>

@@ -263,15 +263,19 @@ function GroupPage() {
                             <span /><span /><span />
                         </div>
                     ) : expenses.length > 0 ? (
-                        <div className="expense-list">
+                        <ul
+                            className="expense-list"
+                            aria-label="Recent expenses"
+                        >
                             {expenses.map(expense => (
-                                <ExpenseBox
-                                    key={expense.expenseId}
-                                    expense={expense}
-                                    onSelect={setSelectedExpense}
-                                />
+                                <li key={expense.expenseId}>
+                                    <ExpenseBox
+                                        expense={expense}
+                                        onSelect={setSelectedExpense}
+                                    />
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     ) : (
                         <div className="empty-state compact-empty">
                             <span className="empty-mark">+</span>
@@ -307,14 +311,14 @@ function GroupPage() {
                 <aside className="members-panel">
                     <span className="eyebrow">People</span>
                     <h2>In this group</h2>
-                    <div className="people-list">
+                    <ul className="people-list" aria-label="Group members">
                         {members.map(member => (
-                            <div className="person-row" key={member.userId}>
+                            <li className="person-row" key={member.userId}>
                                 <span className="person-avatar">{member.userGroupName.slice(0, 1).toUpperCase()}</span>
                                 <strong>{member.userGroupName}</strong>
-                            </div>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </aside>
             </section>
 

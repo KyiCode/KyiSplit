@@ -53,7 +53,7 @@ As inspected on 2026-07-29:
 | 01 — Stabilize Core | Current flows are secure, transactional, and predictable | [Detailed plan](phase01-stabilize-core/README.md) | Complete |
 | 02 — Data and API Foundation | Constraints, contracts, FX, and settlements are authoritative | [Detailed plan](phase02-data-api-foundation/README.md) | Complete |
 | 03 — Complete Product | Full browser workflow from signup through repayment | [Detailed plan](phase03-complete-product/README.md) | Complete |
-| 04 — Release Operations | Accessibility and critical browser verification precede release operations | [Carried-forward tasks](phase04-release-operations/README.md) | In progress |
+| 04 — Release Operations | The private release is accessible, verified, packaged, deployed, and operable | [Detailed plan](phase04-release-operations/README.md) | In progress |
 
 Work on one phase at a time. A phase may be marked complete only after all of
 its exit criteria pass. When implementation reveals a necessary change to a
@@ -66,9 +66,8 @@ next implementation task.
 
 ## Release-Level Phase Outline
 
-This outline defines the intended progression without prematurely fixing task
-details for later phases. Phases 01 and 02 are decomposed into implementation
-tasks.
+This outline defines the intended progression. Every phase is decomposed into
+implementation tasks in its detailed plan.
 
 ### Phase 01 — Stabilize Core
 

@@ -68,6 +68,41 @@ test('requires payer and split totals and preserves expense values on rejection'
     .toHaveValue(5)
 })
 
+test('describes review readiness without relying on color', async () => {
+  const user = userEvent.setup()
+  installFetchQueue(
+    successResponse({
+      groupName: 'Penang weekend',
+      defaultCurrency: 'SGD',
+    }),
+    successResponse({
+      members: [{ userId: 'user-1', userGroupName: 'Kai' }],
+    }),
+  )
+  renderAt(
+    <Routes>
+      <Route path="/group/:groupId/addexpense" element={<AddExpensePage />} />
+    </Routes>,
+    '/group/group-1/addexpense',
+  )
+
+  const readiness = await screen.findByRole('list', {
+    name: 'Expense readiness',
+  })
+  expect(within(readiness).getByText('Details incomplete')).toBeInTheDocument()
+  expect(within(readiness).getByText('Payers incomplete')).toBeInTheDocument()
+  expect(within(readiness).getByText('Split incomplete')).toBeInTheDocument()
+
+  await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Dinner')
+  await user.type(screen.getByRole('spinbutton', { name: 'Total amount' }), '10')
+  await user.click(screen.getByRole('button', { name: 'Paid all for Kai' }))
+  await user.click(screen.getByRole('button', { name: 'Split equally' }))
+
+  expect(within(readiness).getByText('Details complete')).toBeInTheDocument()
+  expect(within(readiness).getByText('Payers complete')).toBeInTheDocument()
+  expect(within(readiness).getByText('Split complete')).toBeInTheDocument()
+})
+
 test('defaults to group currency and permits another supported source currency', async () => {
   const user = userEvent.setup()
   installFetchQueue(

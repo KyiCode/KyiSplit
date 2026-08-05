@@ -20,7 +20,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['test/**/*.{ts,tsx}'],
+    files: ['e2e/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}', 'playwright.config.ts'],
     languageOptions: {
       globals: {
         ...globals.browser,

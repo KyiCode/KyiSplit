@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:artifact": "npm run build && npm --prefix ../frontend run build && node scripts/buildArtifact.mjs && npm --prefix ../release/kyisplit ci --omit=dev --ignore-scripts",
     "dev": "nodemon --exec tsx src/server.ts",
+    "e2e:server": "npm run build:artifact && tsx e2e/server.ts",
+    "start": "node dist/server.js",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test": "npm run typecheck && vitest run",
     "test:watch": "vitest"

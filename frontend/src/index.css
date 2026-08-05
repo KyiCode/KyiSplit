@@ -440,8 +440,11 @@ button:disabled {
 
 .group-list,
 .expense-list {
+  margin: 0;
+  padding: 0;
   display: grid;
   gap: 10px;
+  list-style: none;
 }
 
 .group-card {
@@ -1000,8 +1003,10 @@ button:disabled {
 
 .people-list {
   margin-top: 24px;
+  padding: 0;
   display: grid;
   gap: 8px;
+  list-style: none;
 }
 
 .person-row {
