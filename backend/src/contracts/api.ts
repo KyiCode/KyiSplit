@@ -9,6 +9,7 @@ export const API_ERROR_CODES = [
     "INVITE_EXPIRED",
     "INVITE_NOT_FOUND",
     "NOT_FOUND",
+    "RATE_LIMITED",
     "UNAUTHENTICATED",
     "VALIDATION_ERROR"
 ] as const

@@ -1,4 +1,4 @@
 # Current Task
 
 Implement
-[`task01-responsive-accessibility-baseline.md`](task01-responsive-accessibility-baseline.md).
+[`task07-add-continuous-verification.md`](task07-add-continuous-verification.md).
