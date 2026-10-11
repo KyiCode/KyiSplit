@@ -19,6 +19,7 @@ export type MoneyString = string
 export type CurrencyCode = string
 export type CalendarDate = string
 export type UtcTimestamp = string
+export const MAX_SIGNUP_PASSWORD_BYTES = 72
 
 export interface SuccessResponse<T> {
     status: "success"

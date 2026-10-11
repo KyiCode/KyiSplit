@@ -8,6 +8,7 @@ import { createServerRuntime } from "../src/runtime/serverRuntime"
 const servers: Server[] = []
 
 afterEach(async () => {
+    vi.useRealTimers()
     await Promise.all(servers.splice(0).map(server => (
         new Promise<void>((resolve, reject) => {
             server.close(error => error ? reject(error) : resolve())
@@ -67,6 +68,39 @@ describe("runtime health endpoints", () => {
             expect.any(Error)
         )
     })
+
+    it("shares a stalled readiness query and recovers when it settles", async () => {
+        vi.useFakeTimers()
+        let settleQuery: (() => void) | undefined
+        const query = vi.fn()
+            .mockImplementationOnce(() => new Promise(resolve => {
+                settleQuery = () => resolve({ rows: [] })
+            }))
+            .mockResolvedValueOnce({ rows: [] })
+        const logger = {
+            debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn()
+        }
+        const readiness = createDatabaseReadinessCheck({
+            database: { query }, timeoutMs: 10, logger
+        })
+
+        const concurrent = Promise.all([readiness(), readiness()])
+        await Promise.resolve()
+        expect(query).toHaveBeenCalledOnce()
+        await vi.advanceTimersByTimeAsync(10)
+        await expect(concurrent).resolves.toEqual([false, false])
+
+        const repeated = readiness()
+        await vi.advanceTimersByTimeAsync(10)
+        await expect(repeated).resolves.toBe(false)
+        expect(query).toHaveBeenCalledOnce()
+
+        settleQuery?.()
+        await expect(readiness()).resolves.toBe(true)
+        await expect(readiness()).resolves.toBe(true)
+        expect(query).toHaveBeenCalledTimes(2)
+        vi.useRealTimers()
+    })
 })
 
 describe("authentication abuse controls", () => {
@@ -109,7 +143,8 @@ describe("server runtime lifecycle", () => {
             database: { query, end },
             logger,
             port: 5511,
-            readinessTimeoutMs: 100
+            readinessTimeoutMs: 100,
+            shutdownTimeoutMs: 100
         })
 
         await runtime.start()
@@ -122,6 +157,70 @@ describe("server runtime lifecycle", () => {
         expect(logger.info).toHaveBeenCalledWith("shutdown_completed", { exitCode: 0 })
         expect(process.exitCode).toBe(0)
         process.exitCode = undefined
+    })
+
+    it("closes active connections and forces exit when shutdown exceeds its deadline", async () => {
+        vi.useFakeTimers()
+        const closeAllConnections = vi.fn()
+        const forceExit = vi.fn()
+        const end = vi.fn(async () => undefined)
+        const logger = {
+            debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn()
+        }
+        const runtime = createServerRuntime({
+            app: { listen: () => ({
+                close: vi.fn(() => undefined),
+                closeAllConnections
+            }) },
+            database: { query: async () => ({ rows: [] }), end },
+            logger,
+            port: 5511,
+            readinessTimeoutMs: 100,
+            shutdownTimeoutMs: 10,
+            forceExit
+        })
+
+        await runtime.start()
+        const shutdown = runtime.shutdown(0)
+        await vi.advanceTimersByTimeAsync(10)
+        await shutdown
+
+        expect(closeAllConnections).toHaveBeenCalledOnce()
+        expect(forceExit).toHaveBeenCalledWith(1)
+        expect(end).not.toHaveBeenCalled()
+        expect(logger.error).toHaveBeenCalledWith(
+            "shutdown_failed",
+            expect.objectContaining({ requestedExitCode: 0 }),
+            expect.any(Error)
+        )
+        vi.useRealTimers()
+    })
+
+    it("bounds a stalled database pool shutdown", async () => {
+        vi.useFakeTimers()
+        const forceExit = vi.fn()
+        const end = vi.fn(() => new Promise<void>(() => undefined))
+        const logger = {
+            debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn()
+        }
+        const runtime = createServerRuntime({
+            app: { listen: () => ({ close: (callback: (error?: Error) => void) => callback() }) },
+            database: { query: async () => ({ rows: [] }), end },
+            logger,
+            port: 5511,
+            readinessTimeoutMs: 100,
+            shutdownTimeoutMs: 10,
+            forceExit
+        })
+
+        await runtime.start()
+        const shutdown = runtime.shutdown(0)
+        await vi.advanceTimersByTimeAsync(10)
+        await shutdown
+
+        expect(end).toHaveBeenCalledOnce()
+        expect(forceExit).toHaveBeenCalledWith(1)
+        vi.useRealTimers()
     })
 })
 

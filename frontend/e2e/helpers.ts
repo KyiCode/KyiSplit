@@ -1,4 +1,10 @@
 import { expect, type APIResponse, type Page } from '@playwright/test'
+import {
+  isInvitePath,
+  safeRequestFailure,
+} from './artifactSafety'
+
+export { isInvitePath }
 
 let sequence = 0
 
@@ -34,7 +40,22 @@ export async function logIn(page: Page, email: string) {
   await page.getByRole('textbox', { name: 'Email' }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).not.toHaveURL(/\/auth$/)
+  const pathname = await page.evaluate(() => (
+    (globalThis as unknown as { location: { pathname: string } }).location.pathname
+  ))
+  expect(pathname !== '/auth', 'Sign in should leave the authentication page.')
+    .toBe(true)
+}
+
+export async function expectSafePath(
+  page: Page,
+  pattern: RegExp,
+  description: string,
+) {
+  const pathname = await page.evaluate(() => (
+    (globalThis as unknown as { location: { pathname: string } }).location.pathname
+  ))
+  expect(pattern.test(pathname), description).toBe(true)
 }
 
 export async function signUpAndLogIn(page: Page, email: string) {
@@ -45,14 +66,14 @@ export async function signUpAndLogIn(page: Page, email: string) {
 export async function apiSignUpAndLogIn(page: Page, email: string) {
   await expectOk(await page.request.post('/api/users/signup', {
     data: { email, password: PASSWORD },
-  }))
+  }), 'Signup')
   await expectOk(await page.request.post('/api/users/login', {
     data: { email, password: PASSWORD },
-  }))
+  }), 'Login')
 }
 
 export async function apiLogOut(page: Page) {
-  await expectOk(await page.request.post('/api/users/logout'))
+  await expectOk(await page.request.post('/api/users/logout'), 'Logout')
 }
 
 export async function apiCreateGroup(
@@ -64,7 +85,7 @@ export async function apiCreateGroup(
   const response = await page.request.post('/api/groups/addgroup', {
     data: { groupName, groupUserName, defaultCurrency },
   })
-  const payload = await expectOk(response) as {
+  const payload = await expectOk(response, 'Group creation') as {
     data: { groupId: string }
   }
   return payload.data.groupId
@@ -72,9 +93,11 @@ export async function apiCreateGroup(
 
 export async function apiCreateInvite(page: Page, groupId: string) {
   const response = await page.request.post(`/api/groups/${groupId}/invite`)
-  const payload = await expectOk(response) as {
+  const payload = await expectOk(response, 'Invite creation') as {
     data: { inviteUrl: string }
   }
+  expect(isInvitePath(payload.data.inviteUrl), 'Invite link format is invalid.')
+    .toBe(true)
   return payload.data.inviteUrl
 }
 
@@ -83,7 +106,7 @@ export async function chooseCurrency(page: Page, iso: string) {
   await page.locator('.currency-option').filter({ hasText: iso }).click()
 }
 
-async function expectOk(response: APIResponse) {
-  expect(response.ok(), await response.text()).toBe(true)
+async function expectOk(response: APIResponse, operation: string) {
+  expect(response.ok(), safeRequestFailure(operation, response.status())).toBe(true)
   return response.json()
 }

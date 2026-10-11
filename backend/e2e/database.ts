@@ -3,29 +3,15 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { Client } from 'pg'
+import {
+    assertSchemaCompatibility as verifySchemaCompatibility
+} from '../src/db/schemaCompatibility'
 
 type Environment = Record<string, string | undefined>
 
 interface RunState {
     port: number
     runDirectory: string
-}
-
-const REQUIRED_COLUMNS: Record<string, string[]> = {
-    expense_fx_snapshots: [
-        'expense_id', 'group_id', 'source_currency', 'target_currency', 'rate'
-    ],
-    expenses: ['id', 'group_id', 'name', 'total', 'currency'],
-    group_members: ['group_id', 'user_id', 'user_group_name'],
-    groups: ['id', 'name', 'default_currency'],
-    invites: ['id', 'group_id', 'token', 'expires_at'],
-    payments: ['expense_id', 'user_id', 'amount', 'group_id'],
-    repayments: [
-        'id', 'group_id', 'payer_user_id', 'receiver_user_id', 'amount',
-        'currency', 'repayment_date', 'recorded_by_user_id'
-    ],
-    splits: ['expense_id', 'user_id', 'amount', 'group_id'],
-    users: ['id', 'email', 'password']
 }
 
 export async function prepareRunPostgres(environment: Environment) {
@@ -104,30 +90,7 @@ export async function stopRunPostgres(environment: Environment) {
 }
 
 export async function assertSchemaCompatibility(client: Pick<Client, 'query'>) {
-    const result = await client.query<{
-        column_name: string
-        table_name: string
-    }>(`
-        SELECT table_name, column_name
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-    `)
-    const actual = new Map<string, Set<string>>()
-    for (const row of result.rows) {
-        const columns = actual.get(row.table_name) || new Set<string>()
-        columns.add(row.column_name)
-        actual.set(row.table_name, columns)
-    }
-    const missing = Object.entries(REQUIRED_COLUMNS).flatMap(
-        ([table, columns]) => columns
-            .filter(column => !actual.get(table)?.has(column))
-            .map(column => `${table}.${column}`)
-    )
-    if (missing.length > 0) {
-        throw new Error(
-            `E2E database does not match roadmap/schema-reference.sql; missing: ${missing.join(', ')}`
-        )
-    }
+    await verifySchemaCompatibility(client)
 }
 
 export function readPostgresConfig(environment: Environment) {

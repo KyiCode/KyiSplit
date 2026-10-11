@@ -73,6 +73,8 @@ describe("production runtime configuration", () => {
             port: 10000,
             trustProxyHops: 1,
             requestBodyLimitBytes: 65536,
+            fxProviderTimeoutMs: 5000,
+            shutdownTimeoutMs: 10000,
             database: {
                 connectionString: validEnvironment.DATABASE_URL,
                 max: 10,
@@ -87,6 +89,8 @@ describe("production runtime configuration", () => {
         [{ ...validEnvironment, TRUST_PROXY_HOPS: undefined }, "TRUST_PROXY_HOPS"],
         [{ ...validEnvironment, DATABASE_URL: undefined }, "DATABASE_URL"],
         [{ ...validEnvironment, REQUEST_BODY_LIMIT_BYTES: "512" }, "REQUEST_BODY_LIMIT_BYTES"],
+        [{ ...validEnvironment, FX_PROVIDER_TIMEOUT_MS: "0" }, "FX_PROVIDER_TIMEOUT_MS"],
+        [{ ...validEnvironment, SHUTDOWN_TIMEOUT_MS: "60001" }, "SHUTDOWN_TIMEOUT_MS"],
         [{ ...validEnvironment, DB_POOL_MAX: "0" }, "DB_POOL_MAX"],
         [{ ...validEnvironment, DB_CONNECTION_TIMEOUT_MS: "0" }, "DB_CONNECTION_TIMEOUT_MS"]
     ])("rejects unsafe production configuration %#", (environment, expected) => {

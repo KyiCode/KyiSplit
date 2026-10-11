@@ -5,6 +5,7 @@ import EmailInput from "../components/EmailInput"
 import PasswordInput from "../components/PasswordInput"
 import { signUp } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
+import { MAX_SIGNUP_PASSWORD_BYTES } from "../../../backend/src/contracts/api"
 
 function SignUpPage() {
     const navigate = useNavigate()
@@ -13,6 +14,9 @@ function SignUpPage() {
     const [errorMessage, setErrorMessage] = useState("")
     const [success, setSuccess] = useState(false)
     const [submitting, setSubmitting] = useState(false)
+    const passwordByteLength = new TextEncoder().encode(password).length
+    const passwordWithinByteLimit =
+        passwordByteLength <= MAX_SIGNUP_PASSWORD_BYTES
 
     async function handleSubmit(event: FormEvent) {
         event.preventDefault()
@@ -44,10 +48,27 @@ function SignUpPage() {
                     <p>Enter your email and choose a password.</p>
                 </header>
                 <EmailInput value={email} onChange={setEmail} />
-                <PasswordInput value={password} onChange={setPassword} />
+                <PasswordInput
+                    value={password}
+                    onChange={setPassword}
+                    describedBy={
+                        passwordWithinByteLimit
+                            ? "signup-password-guidance"
+                            : "signup-password-guidance signup-password-error"
+                    }
+                />
+                <p className="field-hint" id="signup-password-guidance">
+                    Use at least 8 characters and at most 72 UTF-8 bytes.
+                    Some characters use multiple bytes.
+                </p>
+                {!passwordWithinByteLimit && (
+                    <p className="notice error small" id="signup-password-error" role="alert">
+                        Password exceeds the 72-byte limit.
+                    </p>
+                )}
                 {errorMessage && <div className="notice error small" role="alert">{errorMessage}</div>}
                 {success && <div className="notice success small" role="status">Account created. Redirecting…</div>}
-                <button className="button primary full" disabled={!email || password.length < 8 || submitting || success}>
+                <button className="button primary full" disabled={!email || password.length < 8 || !passwordWithinByteLimit || submitting || success}>
                     {submitting ? "Creating account…" : "Create account"}
                 </button>
                 <p className="auth-switch">Already registered? <Link to="/auth">Sign in</Link></p>

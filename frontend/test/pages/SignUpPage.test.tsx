@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
@@ -23,6 +23,35 @@ async function completeSignup(user: ReturnType<typeof userEvent.setup>) {
   )
   await user.type(screen.getByLabelText('Password'), 'password123')
 }
+
+test.each([
+  ['accepts 72 ASCII bytes', 'a'.repeat(72), false],
+  ['rejects 73 ASCII bytes', 'a'.repeat(73), true],
+  ['accepts 72 bytes of multibyte text', '😀'.repeat(18), false],
+  ['rejects 76 bytes of multibyte text', '😀'.repeat(19), true],
+])('%s before making a signup request', async (_name, password, rejected) => {
+  const user = userEvent.setup()
+  const fetchMock = vi.fn<typeof fetch>()
+  vi.stubGlobal('fetch', fetchMock)
+  renderSignup()
+  await user.type(
+    screen.getByRole('textbox', { name: 'Email' }),
+    'friend@example.com',
+  )
+  fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: password },
+  })
+
+  expect(screen.getByText(/at most 72 UTF-8 bytes/i)).toBeInTheDocument()
+  const button = screen.getByRole('button', { name: 'Create account' })
+  if (rejected) {
+    expect(button).toBeDisabled()
+    await user.click(button)
+    expect(fetchMock).not.toHaveBeenCalled()
+  } else {
+    expect(button).toBeEnabled()
+  }
+})
 
 test('preserves signup values after rejection', async () => {
   const user = userEvent.setup()

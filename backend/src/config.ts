@@ -19,6 +19,8 @@ export interface DatabaseConfig {
 export interface RuntimeConfig extends AuthConfig, ServerConfig {
     trustProxyHops: number
     requestBodyLimitBytes: number
+    fxProviderTimeoutMs: number
+    shutdownTimeoutMs: number
     authRateLimit: {
         maxAttempts: number
         windowMs: number
@@ -148,6 +150,14 @@ export function readRuntimeConfig(
             1048576,
             "REQUEST_BODY_LIMIT_BYTES"
         ),
+        fxProviderTimeoutMs: readFxProviderTimeoutMs(environment),
+        shutdownTimeoutMs: readBoundedInteger(
+            environment.SHUTDOWN_TIMEOUT_MS,
+            10000,
+            1000,
+            60000,
+            "SHUTDOWN_TIMEOUT_MS"
+        ),
         authRateLimit: {
             maxAttempts: readBoundedInteger(
                 environment.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
@@ -166,6 +176,18 @@ export function readRuntimeConfig(
         },
         database: readDatabaseConfig(environment)
     }
+}
+
+export function readFxProviderTimeoutMs(
+    environment: Environment = process.env
+) {
+    return readBoundedInteger(
+        environment.FX_PROVIDER_TIMEOUT_MS,
+        5000,
+        100,
+        30000,
+        "FX_PROVIDER_TIMEOUT_MS"
+    )
 }
 
 export function readAppOrigin(environment: Environment = process.env) {

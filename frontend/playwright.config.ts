@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { loadEnvFile } from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
+import { SAFE_BROWSER_ARTIFACT_OPTIONS } from './e2e/artifactSafety'
 
 const localEnvironmentFile = path.resolve('.env.e2e.local')
 if (fs.existsSync(localEnvironmentFile)) loadEnvFile(localEnvironmentFile)
@@ -44,12 +45,10 @@ export default defineConfig({
   expect: {
     timeout: 5_000,
   },
-  reporter: [['line']],
+  reporter: [['./e2e/safeReporter.ts']],
   use: {
     baseURL: frontendOrigin,
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    ...SAFE_BROWSER_ARTIFACT_OPTIONS,
   },
   projects: [
     {
@@ -75,8 +74,8 @@ export default defineConfig({
       url: `${frontendOrigin}/api/users/verifysession`,
       reuseExistingServer: false,
       timeout: 60_000,
-      stdout: 'pipe',
-      stderr: 'pipe',
+      stdout: 'ignore',
+      stderr: 'ignore',
       env: {
         ...process.env,
         BCRYPT_SALT: '4',

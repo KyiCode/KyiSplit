@@ -154,6 +154,47 @@ describe("user controller", () => {
         expect(queryMock).not.toHaveBeenCalled()
     })
 
+    it.each([
+        ["72 ASCII bytes", "a".repeat(72)],
+        ["18 four-byte characters", "😀".repeat(18)]
+    ])("accepts a signup password at the bcrypt byte limit: %s", async (_name, password) => {
+        accountMock.mockResolvedValue(false)
+        vi.mocked(bcrypt.genSaltSync).mockReturnValue("salt")
+        hashMock.mockResolvedValue("hashed-password")
+        queryMock.mockResolvedValue({ rows: [] } as never)
+        const response = createResponse()
+
+        await signup(
+            createRequest({ email: "person@example.com", password }),
+            response
+        )
+
+        expect(hashMock).toHaveBeenCalledWith(password, "salt")
+        expect(response.status).toHaveBeenCalledWith(201)
+    })
+
+    it.each([
+        ["73 ASCII bytes", "a".repeat(73)],
+        ["19 four-byte characters", "😀".repeat(19)]
+    ])("rejects a signup password over the bcrypt byte limit: %s", async (_name, password) => {
+        const response = createResponse()
+
+        await signup(
+            createRequest({ email: "person@example.com", password }),
+            response
+        )
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "VALIDATION_ERROR",
+            message: "Password must be 72 UTF-8 bytes or fewer"
+        })
+        expect(accountMock).not.toHaveBeenCalled()
+        expect(hashMock).not.toHaveBeenCalled()
+        expect(queryMock).not.toHaveBeenCalled()
+    })
+
     it("creates a cookie session without returning a token", async () => {
         getUserMock.mockResolvedValue({
             id: "user-1",
@@ -231,6 +272,25 @@ describe("user controller", () => {
 
         expect(response.status).toHaveBeenCalledWith(400)
         expect(getUserMock).not.toHaveBeenCalled()
+    })
+
+    it("keeps legacy login passwords longer than 72 bytes compatible", async () => {
+        const password = "a".repeat(80)
+        getUserMock.mockResolvedValue({
+            id: "user-1",
+            email: "person@example.com",
+            password: "hashed-password"
+        })
+        compareMock.mockResolvedValue(true)
+        const response = createResponse()
+
+        await login(
+            createRequest({ email: "person@example.com", password }),
+            response
+        )
+
+        expect(compareMock).toHaveBeenCalledWith(password, "hashed-password")
+        expect(response.status).toHaveBeenCalledWith(200)
     })
 
     it("verifies an authenticated session with user identity", async () => {

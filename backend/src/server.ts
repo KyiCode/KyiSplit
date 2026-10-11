@@ -36,7 +36,8 @@ const runtime = createServerRuntime({
     database,
     logger,
     port: config.port,
-    readinessTimeoutMs: config.database.connectionTimeoutMs
+    readinessTimeoutMs: config.database.connectionTimeoutMs,
+    shutdownTimeoutMs: config.shutdownTimeoutMs
 })
 
 const shutdown = (exitCode: number) => runtime.shutdown(exitCode)

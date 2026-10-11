@@ -13,10 +13,32 @@ export function createDatabaseReadinessCheck({
     timeoutMs: number
     logger: Logger
 }) {
+    let inFlightProbe: Promise<boolean> | undefined
+
     return async () => {
+        if (!inFlightProbe) {
+            const operation = Promise.resolve()
+                .then(() => database.query("SELECT 1"))
+                .then(
+                    () => true,
+                    error => {
+                        logger.warn("readiness_check_failed", {
+                            operation: "database_probe",
+                            timeoutMs
+                        }, error)
+                        return false
+                    }
+                )
+            const trackedOperation = operation.finally(() => {
+                if (inFlightProbe === trackedOperation) {
+                    inFlightProbe = undefined
+                }
+            })
+            inFlightProbe = trackedOperation
+        }
+
         try {
-            await withTimeout(database.query("SELECT 1"), timeoutMs)
-            return true
+            return await withTimeout(inFlightProbe, timeoutMs)
         } catch (error) {
             logger.warn("readiness_check_failed", {
                 operation: "database_probe",

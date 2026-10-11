@@ -47,14 +47,15 @@ describe('E2E PostgreSQL guardrails', () => {
         expect(() => readPostgresConfig(environment)).toThrow(message)
     })
 
-    it('rejects a template missing required schema columns', async () => {
+    it('rejects a template missing required schema metadata', async () => {
         const client = {
             query: vi.fn().mockResolvedValue({
-                rows: [{ table_name: 'users', column_name: 'id' }]
+                rows: []
             })
         }
         await expect(assertSchemaCompatibility(client as never)).rejects.toThrow(
-            /schema-reference\.sql; missing:/
+            /schema-reference\.sql:/
         )
+        expect(client.query).toHaveBeenCalledTimes(5)
     })
 })

@@ -1,3 +1,5 @@
+import { MAX_SIGNUP_PASSWORD_BYTES } from "../contracts/api"
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_EMAIL_LENGTH = 254
 const MIN_PASSWORD_LENGTH = 8
@@ -6,6 +8,10 @@ const MAX_PASSWORD_LENGTH = 128
 export interface Credentials {
     email: string
     password: string
+}
+
+export function isSignupPasswordWithinByteLimit(password: string) {
+    return Buffer.byteLength(password, "utf8") <= MAX_SIGNUP_PASSWORD_BYTES
 }
 
 export function parseCredentials(input: unknown): Credentials | null {

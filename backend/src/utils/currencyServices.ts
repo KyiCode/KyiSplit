@@ -1,4 +1,5 @@
 import { logger } from "../logging/logger"
+import { readFxProviderTimeoutMs } from "../config"
 
 type Environment = Record<string, string | undefined>
 
@@ -76,29 +77,32 @@ export async function getFxQuote(
             environment.RATE_PROVIDER_URL ||
             "https://api.frankfurter.dev"
         ).replace(/\/+$/, "")
-        const response = await fetch(
-            `${providerUrl}/v2/rate/${base}/${target}`
-        )
-        if (!response.ok) throw new FxUnavailableError()
+        return await withAbortableTimeout(async signal => {
+            const response = await fetch(
+                `${providerUrl}/v2/rate/${base}/${target}`,
+                { signal }
+            )
+            if (!response.ok) throw new FxUnavailableError()
 
-        const body = await response.json() as {
-            rate?: unknown
-            date?: unknown
-        }
-        const numericRate = typeof body.rate === "number"
-            ? body.rate
-            : Number(body.rate)
-        if (!Number.isFinite(numericRate) || numericRate <= 0) {
-            throw new FxUnavailableError()
-        }
+            const body = await response.json() as {
+                rate?: unknown
+                date?: unknown
+            }
+            const numericRate = typeof body.rate === "number"
+                ? body.rate
+                : Number(body.rate)
+            if (!Number.isFinite(numericRate) || numericRate <= 0) {
+                throw new FxUnavailableError()
+            }
 
-        return validateFxQuote({
-            rate: String(body.rate),
-            provider: "frankfurter",
-            effectiveAt: body.date === undefined
-                ? null
-                : String(body.date)
-        })
+            return validateFxQuote({
+                rate: String(body.rate),
+                provider: "frankfurter",
+                effectiveAt: body.date === undefined
+                    ? null
+                    : String(body.date)
+            })
+        }, readFxProviderTimeoutMs(environment))
     } catch (error) {
         if (error instanceof FxUnavailableError) throw error
         logger.warn("fx_provider_request_failed", {
@@ -108,4 +112,22 @@ export async function getFxQuote(
         }, error)
         throw new FxUnavailableError()
     }
+}
+
+function withAbortableTimeout<T>(
+    operation: (signal: AbortSignal) => Promise<T>,
+    timeoutMs: number
+): Promise<T> {
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+            controller.abort()
+            reject(new Error("FX provider request timed out"))
+        }, timeoutMs)
+    })
+    return Promise.race([operation(controller.signal), timeout])
+        .finally(() => {
+            if (timer) clearTimeout(timer)
+        })
 }

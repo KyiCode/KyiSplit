@@ -215,6 +215,71 @@ test('refreshes expenses and balances after successful deletion', async () => {
   )
 })
 
+test('keeps a confirmed deletion and retries activity sync without deleting again', async () => {
+  const user = userEvent.setup()
+  let activityRequests = 0
+  const fetchMock = vi.fn<typeof fetch>((input, options) => {
+    const url = String(input)
+    if (url.endsWith('/api/groups/group-1')) {
+      return Promise.resolve(successResponse(groupResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/members')) {
+      return Promise.resolve(successResponse(membersResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/getbalance')) {
+      return Promise.resolve(successResponse(balanceResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/repayments')) {
+      return Promise.resolve(successResponse({ repayments: [] }))
+    }
+    if (url.endsWith('/api/expenses/group-1/expense-1')) {
+      return Promise.resolve(successResponse({ expenseId: 'expense-1' }))
+    }
+    if (url.endsWith('/api/expenses/group-1')) {
+      activityRequests += 1
+      if (activityRequests === 1) {
+        return Promise.resolve(successResponse({ expenses: [expense] }))
+      }
+      if (activityRequests === 2) {
+        return Promise.reject(new Error('activity refresh failed'))
+      }
+      return Promise.resolve(successResponse({ expenses: [] }))
+    }
+    throw new Error(`Unexpected request: ${url} ${options?.method || 'GET'}`)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  renderGroup()
+  const dialog = await openDeleteConfirmation(user)
+
+  await user.click(within(dialog).getByRole('button', {
+    name: 'Delete expense',
+  }))
+
+  const syncMessage = await screen.findByText(
+    'Expense deleted, but group activity could not be synchronized.',
+  )
+  const syncNotice = syncMessage.parentElement!
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', {
+    name: 'View details for Dinner',
+  })).not.toBeInTheDocument()
+  expect(fetchMock.mock.calls.filter(([url]) => (
+    String(url).endsWith('/api/groups/group-1/getbalance')
+  ))).toHaveLength(2)
+
+  await user.click(within(syncNotice).getByRole('button', {
+    name: 'Refresh activity',
+  }))
+
+  expect(await screen.findByRole('heading', {
+    name: 'Nothing split yet',
+  })).toBeInTheDocument()
+  expect(fetchMock.mock.calls.filter(([url, options]) => (
+    String(url).includes('/api/expenses/group-1/expense-1') &&
+    (options as RequestInit | undefined)?.method === 'DELETE'
+  ))).toHaveLength(1)
+})
+
 test.each([
   [
     failureResponse('Forbidden', 403, 'FORBIDDEN'),

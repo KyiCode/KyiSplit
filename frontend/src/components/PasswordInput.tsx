@@ -3,9 +3,10 @@ import { useId, useState } from "react"
 type PasswordInputProp = {
     value: string
     onChange: (value: string) => void
+    describedBy?: string
 }
 
-function PasswordInput({ value, onChange }: PasswordInputProp) {
+function PasswordInput({ value, onChange, describedBy }: PasswordInputProp) {
     const [hidePassword, setHidePassword] = useState(true)
     const inputId = useId()
 
@@ -19,6 +20,7 @@ function PasswordInput({ value, onChange }: PasswordInputProp) {
                     type={hidePassword ? "password" : "text"}
                     autoComplete="current-password"
                     placeholder="At least 8 characters"
+                    aria-describedby={describedBy}
                     onChange={(e) => onChange(e.target.value)}
                 />
                 <button

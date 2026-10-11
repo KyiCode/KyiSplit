@@ -49,6 +49,8 @@ directories. Configure these variables before starting the application:
 | Backend | `DB_POOL_MAX` | Maximum PostgreSQL pool clients |
 | Backend | `DB_IDLE_TIMEOUT_MS` | PostgreSQL idle client timeout |
 | Backend | `DB_CONNECTION_TIMEOUT_MS` | Bounded PostgreSQL connection and readiness timeout |
+| Backend | `FX_PROVIDER_TIMEOUT_MS` | FX provider request and response-body timeout (default 5 seconds) |
+| Backend | `SHUTDOWN_TIMEOUT_MS` | Grace period for closing HTTP connections and the database pool (default 10 seconds) |
 | Backend | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Login and signup attempts per client window |
 | Backend | `AUTH_RATE_LIMIT_WINDOW_MS` | Login and signup throttling window |
 | Frontend | `VITE_BASE_URL` | Development-only backend origin; production always uses same-origin API paths |
@@ -108,6 +110,43 @@ Express serves `/api` before static files, returns JSON for unknown API routes,
 and serves the React application shell for direct browser-route navigation.
 Production browser requests always use relative same-origin API paths.
 
+## Repository CI and Artifact Checksum
+
+`.github/workflows/verify.yml` uses Node.js 22.23.3, installs both locked
+dependency trees with `npm ci`, and runs backend tests, frontend tests, lint,
+and the production artifact build. It uploads the commit-versioned archive and
+its SHA-256 file only after those steps succeed. The npm cache stores downloads;
+it does not replace lockfile installs.
+
+To reproduce the artifact packaging locally after the verification commands:
+
+```powershell
+$env:RELEASE_VERSION = (git rev-parse HEAD).Trim()
+npm.cmd --prefix backend run build:artifact
+npm.cmd --prefix backend run archive:artifact -- $env:RELEASE_VERSION
+```
+
+The archive includes the production `node_modules` tree. Verify its checksum
+and inspect its contents with:
+
+```powershell
+$archive = "release/kyisplit-$env:RELEASE_VERSION.tar.gz"
+$actualHash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+$expectedHash = (Get-Content "$archive.sha256").Split(' ')[0]
+if ($actualHash -ne $expectedHash) { throw 'Artifact checksum mismatch.' }
+tar -tzf $archive
+```
+
+The workflow upload step excludes Playwright output and local E2E configuration
+explicitly. It does not deploy, publish a container, or run the live database
+and Chromium gates reserved for Task 07.
+
+Validate the workflow YAML locally when Prettier is available:
+
+```powershell
+npx.cmd --yes prettier@3.6.2 --check .github/workflows/verify.yml
+```
+
 ## Backend Logging
 
 The backend writes one structured JSON record per line. Startup, database
@@ -153,12 +192,27 @@ The backend test command includes production and test TypeScript checks. A
 frontend automated test suite is also available with
 `npm.cmd --prefix frontend test`.
 
+Check a database schema without applying changes by passing its PostgreSQL URL
+explicitly:
+
+```powershell
+npm.cmd --prefix backend run schema:check -- --database-url postgresql://user@localhost/kyisplit_test
+```
+
+The checker reads PostgreSQL catalog metadata and compares it with
+`roadmap/schema-reference.sql`. It does not fall back to `DATABASE_URL`.
+
 ### Isolated end-to-end verification
 
 The Playwright suite never falls back to the application database. It copies a
 stopped local PostgreSQL template whose schema matches
 `roadmap/schema-reference.sql`, runs the copy on a test-only port, and deletes
 the entire run directory afterward.
+
+Browser screenshots, traces, and video are disabled, and Playwright failure
+output suppresses raw browser errors and URLs. See the
+[browser artifact policy](frontend/e2e/ARTIFACT_POLICY.md) for generated-file
+retention and upload rules.
 
 Set these variables in the shell that starts the suite; do not add credentials
 to a tracked file. Alternatively, put them in the ignored

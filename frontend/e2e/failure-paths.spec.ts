@@ -5,6 +5,7 @@ import {
   apiLogOut,
   apiSignUpAndLogIn,
   chooseCurrency,
+  expectSafePath,
   installCurrencyFixture,
   logIn,
   uniqueEmail,
@@ -86,8 +87,12 @@ test('unauthenticated navigation is restored after login', async ({ page }) => {
   await apiLogOut(page)
 
   await page.goto(`/group/${groupId}`)
-  await expect(page).toHaveURL(/\/auth$/)
+  await expectSafePath(page, /\/auth$/, 'Protected navigation should open sign in.')
   await logIn(page, owner)
-  await expect(page).toHaveURL(new RegExp(`/group/${groupId}$`))
+  await expectSafePath(
+    page,
+    new RegExp(`^/group/${groupId}$`),
+    'Sign in should restore the requested group page.',
+  )
   await expect(page.getByRole('heading', { name: 'Restored group' })).toBeVisible()
 })

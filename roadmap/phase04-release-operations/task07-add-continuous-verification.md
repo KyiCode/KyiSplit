@@ -3,12 +3,16 @@
 - Story points: 5
 - Area: Operations
 - Status: Planned
-- Dependencies: Tasks 04 and 06
+- Dependencies: Tasks 04, 06, and review follow-up Tasks 12–21
 
 ## Goal
 
 Reject unreproducible or incompatible changes before producing a release
 artifact.
+
+Task 21 supplies the repository-only workflow and artifact gates. Reuse that
+work here and complete the remaining disposable-database, browser, and remote
+workflow verification. Task 21 completion alone does not complete this task.
 
 ## Acceptance Criteria
 

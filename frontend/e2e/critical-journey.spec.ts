@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test'
 import {
   PASSWORD,
   chooseCurrency,
+  expectSafePath,
+  isInvitePath,
   installCurrencyFixture,
   logIn,
   signUp,
@@ -30,7 +32,7 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Invite people' }).click()
   const inviteUrl = await page.locator('.invite-banner p').innerText()
-  expect(inviteUrl).toMatch(/\/join\/[0-9a-f]{64}$/)
+  expect(isInvitePath(inviteUrl), 'Invite link format is invalid.').toBe(true)
 
   await page.getByRole('button', { name: 'Sign out' }).click()
   await page.goto(inviteUrl)
@@ -40,7 +42,11 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Email' }).fill(blairEmail)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(new RegExp(`/join/${inviteUrl.split('/').pop()}$`))
+  await expectSafePath(
+    page,
+    /^\/join\/[0-9a-f]{64}$/i,
+    'Sign in should restore the pending invite route.',
+  )
   await page.getByLabel('Your name in this group').fill('Blair')
   await page.getByRole('button', { name: 'Join group' }).click()
   await expect(page.getByRole('heading', { name: 'Tokyo Weekend' })).toBeVisible()

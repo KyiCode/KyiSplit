@@ -29,6 +29,8 @@ function GroupPage() {
     const [confirmingDelete, setConfirmingDelete] = useState(false)
     const [deletingExpense, setDeletingExpense] = useState(false)
     const [deleteError, setDeleteError] = useState("")
+    const [activitySyncError, setActivitySyncError] = useState("")
+    const [activitySyncing, setActivitySyncing] = useState(false)
     const [balanceData, setBalanceData] = useState<BalanceData | null>(null)
     const [balanceLoading, setBalanceLoading] = useState(true)
     const [balanceError, setBalanceError] = useState("")
@@ -135,9 +137,18 @@ function GroupPage() {
 
     async function refreshActivity() {
         if (!groupId) return
-        const expenseData = await fetchExpenses(groupId)
-        setExpenses(expenseData.expenses)
-        refreshBalances()
+        setActivitySyncing(true)
+        try {
+            const expenseData = await fetchExpenses(groupId)
+            setExpenses(expenseData.expenses)
+            setActivitySyncError("")
+        } catch {
+            setActivitySyncError(
+                "Expense deleted, but group activity could not be synchronized."
+            )
+        } finally {
+            setActivitySyncing(false)
+        }
     }
 
     function refreshBalances() {
@@ -152,9 +163,13 @@ function GroupPage() {
         setDeleteError("")
         try {
             await deleteExpense(groupId, selectedExpense.expenseId)
-            await refreshActivity()
+            setExpenses(current => current.filter(expense => (
+                expense.expenseId !== selectedExpense.expenseId
+            )))
             setSelectedExpense(null)
             setConfirmingDelete(false)
+            refreshBalances()
+            void refreshActivity()
         } catch (error) {
             if (error instanceof ApiError && error.status === 403) {
                 setDeleteError(
@@ -254,6 +269,19 @@ function GroupPage() {
                             <h2>Recent expenses</h2>
                         </div>
                     </div>
+                    {activitySyncError && (
+                        <div className="notice error small" role="alert">
+                            <span>{activitySyncError}</span>
+                            <button
+                                disabled={activitySyncing}
+                                onClick={() => void refreshActivity()}
+                            >
+                                {activitySyncing
+                                    ? "Refreshing activity…"
+                                    : "Refresh activity"}
+                            </button>
+                        </div>
+                    )}
                     {loading ? (
                         <div
                             className="skeleton-list"

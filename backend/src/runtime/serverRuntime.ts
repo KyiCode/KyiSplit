@@ -4,6 +4,7 @@ import { withTimeout } from "./health"
 interface ListeningServer {
     once?: (event: string, listener: (...args: unknown[]) => void) => unknown
     close: (callback: (error?: Error) => void) => unknown
+    closeAllConnections?: () => void
 }
 
 interface AppLike {
@@ -25,6 +26,8 @@ interface ServerRuntimeOptions {
     logger: Logger
     port: number
     readinessTimeoutMs: number
+    shutdownTimeoutMs: number
+    forceExit?: (exitCode: number) => void
 }
 
 export function createServerRuntime({
@@ -32,7 +35,9 @@ export function createServerRuntime({
     database,
     logger,
     port,
-    readinessTimeoutMs
+    readinessTimeoutMs,
+    shutdownTimeoutMs,
+    forceExit = (exitCode: number) => process.exit(exitCode)
 }: ServerRuntimeOptions) {
     let server: ListeningServer | undefined
     let shutdownPromise: Promise<void> | undefined
@@ -60,10 +65,29 @@ export function createServerRuntime({
         if (shutdownPromise) return shutdownPromise
         shutdownPromise = (async () => {
             logger.info("shutdown_started", { exitCode })
-            if (server) await close(server)
-            await database.end()
-            process.exitCode = exitCode
-            logger.info("shutdown_completed", { exitCode })
+            const deadline = Date.now() + shutdownTimeoutMs
+            try {
+                if (server) {
+                    await withTimeout(
+                        close(server),
+                        Math.max(1, deadline - Date.now())
+                    )
+                }
+                await withTimeout(
+                    database.end(),
+                    Math.max(1, deadline - Date.now())
+                )
+                process.exitCode = exitCode
+                logger.info("shutdown_completed", { exitCode })
+            } catch (error) {
+                logger.error("shutdown_failed", {
+                    requestedExitCode: exitCode,
+                    shutdownTimeoutMs
+                }, error)
+                server?.closeAllConnections?.()
+                process.exitCode = 1
+                forceExit(1)
+            }
         })().catch(error => {
             logger.error("shutdown_failed", { requestedExitCode: exitCode }, error)
             throw error

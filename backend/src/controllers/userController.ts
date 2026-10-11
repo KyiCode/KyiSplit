@@ -4,7 +4,10 @@ import bcrypt from 'bcryptjs'
 import { Request, Response } from 'express'
 
 import { readAuthConfig } from '../config'
-import { parseCredentials } from '../utils/authCredentials'
+import {
+    isSignupPasswordWithinByteLimit,
+    parseCredentials
+} from '../utils/authCredentials'
 import generateToken, { clearSessionCookie } from "../utils/tokenGenerator"
 import { hasAccount } from '../utils/validators'
 import { getUser } from '../utils/queries'
@@ -23,6 +26,15 @@ export const signup = async (req: Request, res: Response) => {
     }
 
     const { email, password } = credentials
+    if (!isSignupPasswordWithinByteLimit(password)) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Password must be 72 UTF-8 bytes or fewer"
+        )
+    }
+
     try {
         if (await hasAccount(email)) {
             return sendFailure(

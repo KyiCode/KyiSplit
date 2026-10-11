@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# Browser output may contain credentials, cookies, and invitation links.
+# Keep it local and exclude these paths from artifact uploads.
 playwright-report
 test-results
 *.local
