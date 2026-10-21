@@ -38,6 +38,7 @@ import { isUserAuthorised } from "../../src/utils/validators"
 import {
     addExpense,
     deleteExpense,
+    getExpenseDetail,
     getExpenseList
 } from "../../src/controllers/expenseController"
 
@@ -69,6 +70,16 @@ function createRequest(body: Record<string, unknown>) {
 }
 
 function createDeleteRequest(
+    groupId = GROUP_ID,
+    expenseId = EXPENSE_ID
+) {
+    return {
+        params: { groupId, expenseId },
+        user: { userId: "alice" }
+    } as unknown as Request
+}
+
+function createDetailRequest(
     groupId = GROUP_ID,
     expenseId = EXPENSE_ID
 ) {
@@ -377,6 +388,249 @@ describe("expense controller", () => {
                     currency: "SGD"
                 }]
             }
+        })
+    })
+
+    it("returns saved payer, split, and cross-currency FX details", async () => {
+        authorisedMock.mockResolvedValue(true)
+        queryMock
+            .mockResolvedValueOnce({ rows: [{
+                id: EXPENSE_ID,
+                group_id: GROUP_ID,
+                name: "Dinner",
+                total: "30",
+                date: "2026-07-28",
+                created_at: "2026-07-28T12:00:00.000Z",
+                currency: "USD",
+                source_currency: "USD",
+                target_currency: "SGD",
+                rate: "1.350000000000",
+                provider: "frankfurter",
+                provider_effective_at: "2026-07-27T00:00:00.000Z",
+                captured_at: "2026-07-28T12:00:00.000Z"
+            }] } as never)
+            .mockResolvedValueOnce({ rows: [
+                { user_id: "alice", amount: "20" },
+                { user_id: "bob", amount: "10.00" }
+            ] } as never)
+            .mockResolvedValueOnce({ rows: [
+                { user_id: "alice", amount: "12" },
+                { user_id: "bob", amount: "18.00" }
+            ] } as never)
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(queryMock).toHaveBeenNthCalledWith(
+            1,
+            expect.stringContaining("WHERE expense.id = $2 AND expense.group_id = $1"),
+            [GROUP_ID, EXPENSE_ID]
+        )
+        expect(queryMock.mock.calls[1]?.[0]).toContain("FROM payments")
+        expect(queryMock.mock.calls[2]?.[0]).toContain("FROM splits")
+        expect(response.status).toHaveBeenCalledWith(200)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "success",
+            data: {
+                expense: {
+                    expenseId: EXPENSE_ID,
+                    groupId: GROUP_ID,
+                    expenseName: "Dinner",
+                    expenseTotal: "30.00",
+                    date: "2026-07-28",
+                    createdAt: "2026-07-28T12:00:00.000Z",
+                    currency: "USD",
+                    paidBy: [
+                        { userId: "alice", amount: "20.00" },
+                        { userId: "bob", amount: "10.00" }
+                    ],
+                    splits: [
+                        { userId: "alice", amount: "12.00" },
+                        { userId: "bob", amount: "18.00" }
+                    ],
+                    fxSnapshot: {
+                        sourceCurrency: "USD",
+                        targetCurrency: "SGD",
+                        rate: "1.350000000000",
+                        provider: "frankfurter",
+                        effectiveAt: "2026-07-27T00:00:00.000Z",
+                        capturedAt: "2026-07-28T12:00:00.000Z"
+                    }
+                }
+            }
+        })
+        expect(getFxQuoteMock).not.toHaveBeenCalled()
+    })
+
+    it("returns identity FX facts for a same-currency expense", async () => {
+        authorisedMock.mockResolvedValue(true)
+        queryMock
+            .mockResolvedValueOnce({ rows: [{
+                id: EXPENSE_ID,
+                group_id: GROUP_ID,
+                name: "Lunch",
+                total: "8.5",
+                date: "2026-07-28",
+                created_at: "2026-07-28T12:00:00.000Z",
+                currency: "SGD",
+                source_currency: "SGD",
+                target_currency: "SGD",
+                rate: "1.000000000000",
+                provider: "identity",
+                provider_effective_at: null,
+                captured_at: "2026-07-28T12:00:00.000Z"
+            }] } as never)
+            .mockResolvedValueOnce({ rows: [{ user_id: "alice", amount: "8.5" }] } as never)
+            .mockResolvedValueOnce({ rows: [{ user_id: "bob", amount: "8.5" }] } as never)
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                expense: expect.objectContaining({
+                    fxSnapshot: expect.objectContaining({
+                        sourceCurrency: "SGD",
+                        targetCurrency: "SGD",
+                        rate: "1.000000000000",
+                        provider: "identity",
+                        effectiveAt: null
+                    })
+                })
+            })
+        }))
+    })
+
+    it.each([
+        ["malformed group", "not-a-group", EXPENSE_ID],
+        ["malformed expense", GROUP_ID, "not-an-expense"]
+    ])("rejects %s detail identifiers", async (_case, groupId, expenseId) => {
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(groupId, expenseId), response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "VALIDATION_ERROR",
+            message: "Invalid expense"
+        })
+        expect(authorisedMock).not.toHaveBeenCalled()
+        expect(queryMock).not.toHaveBeenCalled()
+    })
+
+    it("denies a non-member before looking up an expense", async () => {
+        authorisedMock.mockResolvedValue(false)
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(response.status).toHaveBeenCalledWith(403)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "FORBIDDEN",
+            message: "Forbidden"
+        })
+        expect(queryMock).not.toHaveBeenCalled()
+    })
+
+    it("returns not found when the expense is absent from the authorized group", async () => {
+        authorisedMock.mockResolvedValue(true)
+        queryMock.mockResolvedValueOnce({ rows: [] } as never)
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(queryMock).toHaveBeenCalledTimes(1)
+        expect(response.status).toHaveBeenCalledWith(404)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "NOT_FOUND",
+            message: "Expense not found"
+        })
+    })
+
+    it("reports incomplete saved FX or allocation data as an integrity error", async () => {
+        authorisedMock.mockResolvedValue(true)
+        queryMock.mockResolvedValueOnce({ rows: [{
+            id: EXPENSE_ID,
+            group_id: GROUP_ID,
+            name: "Dinner",
+            total: "30.00",
+            date: "2026-07-28",
+            created_at: "2026-07-28T12:00:00.000Z",
+            currency: "SGD",
+            source_currency: null,
+            target_currency: null,
+            rate: null,
+            provider: null,
+            provider_effective_at: null,
+            captured_at: null
+        }] } as never)
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(queryMock).toHaveBeenCalledTimes(1)
+        expect(response.status).toHaveBeenCalledWith(500)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "DATA_INTEGRITY_ERROR",
+            message: "Stored expense details are incomplete"
+        })
+    })
+
+    it.each(["payment", "split"])(
+        "rejects missing saved %s entries",
+        async missingKind => {
+            authorisedMock.mockResolvedValue(true)
+            queryMock
+                .mockResolvedValueOnce({ rows: [{
+                    id: EXPENSE_ID,
+                    group_id: GROUP_ID,
+                    name: "Dinner",
+                    total: "30.00",
+                    date: "2026-07-28",
+                    created_at: "2026-07-28T12:00:00.000Z",
+                    currency: "SGD",
+                    source_currency: "SGD",
+                    target_currency: "SGD",
+                    rate: "1.000000000000",
+                    provider: "identity",
+                    provider_effective_at: null,
+                    captured_at: "2026-07-28T12:00:00.000Z"
+                }] } as never)
+                .mockResolvedValueOnce({ rows: missingKind === "payment"
+                    ? []
+                    : [{ user_id: "alice", amount: "30.00" }] } as never)
+                .mockResolvedValueOnce({ rows: missingKind === "split"
+                    ? []
+                    : [{ user_id: "bob", amount: "30.00" }] } as never)
+            const response = createResponse()
+
+            await getExpenseDetail(createDetailRequest(), response)
+
+            expect(response.status).toHaveBeenCalledWith(500)
+            expect(response.json).toHaveBeenCalledWith({
+                status: "fail",
+                code: "DATA_INTEGRITY_ERROR",
+                message: "Stored expense details are incomplete"
+            })
+        }
+    )
+
+    it("returns a stable error when a detail query fails", async () => {
+        authorisedMock.mockResolvedValue(true)
+        queryMock.mockRejectedValue(new Error("relation=expenses password=secret"))
+        const response = createResponse()
+
+        await getExpenseDetail(createDetailRequest(), response)
+
+        expect(response.status).toHaveBeenCalledWith(500)
+        expect(response.json).toHaveBeenCalledWith({
+            status: "fail",
+            code: "INTERNAL_ERROR",
+            message: "Server error getting expense details"
         })
     })
 

@@ -3,11 +3,21 @@ import type {
     CreateExpenseData,
     CreateExpenseRequest,
     DeleteExpenseData,
+    ExpenseDetailData,
     ExpenseListData
 } from "../../../backend/src/contracts/api"
 
 export async function fetchExpenses(groupId: string) {
     return apiRequest<ExpenseListData>(`/api/expenses/${groupId}`)
+}
+
+export async function fetchExpenseDetail(
+    groupId: string,
+    expenseId: string
+) {
+    return apiRequest<ExpenseDetailData>(
+        `/api/expenses/${groupId}/${expenseId}`
+    )
 }
 
 export async function createExpense(groupId: string, expenseName: string, expenseTotal: string,

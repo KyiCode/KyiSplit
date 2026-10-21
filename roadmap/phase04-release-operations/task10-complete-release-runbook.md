@@ -23,6 +23,12 @@ administration, recovery, and private-user onboarding.
   restore, and incident instructions with named ownership roles.
 - Private-user onboarding covers invitation delivery, supported workflow,
   support contact, and access removal without exposing internal secrets.
+- Document the approved private onboarding and maintainer-assisted account
+  recovery procedure, including identity verification, owner responsibilities,
+  current session-revocation limitations, and escalation. Do not imply signup
+  is restricted merely because the intended audience is private; record the
+  actual deployed access controls. Self-service reset and new signup controls
+  require separate product decisions.
 - A maintainer other than the author can follow the runbook using placeholders
   and identify every required external value.
 

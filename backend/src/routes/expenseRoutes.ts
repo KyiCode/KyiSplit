@@ -3,6 +3,7 @@ import express from 'express'
 import {
     addExpense,
     deleteExpense,
+    getExpenseDetail,
     getExpenseList
 } from '../controllers/expenseController'
 
@@ -16,6 +17,7 @@ router.use(authMiddleware)
 router.post("/addexpense", addExpense)
 
 router.get("/:groupId", getExpenseList)
+router.get("/:groupId/:expenseId", getExpenseDetail)
 router.delete("/:groupId/:expenseId", deleteExpense)
 
 

@@ -3,12 +3,16 @@
 - Story points: 5
 - Area: Operations
 - Status: Planned
-- Dependencies: Tasks 04, 06, and review follow-up Tasks 12–21
+- Dependencies: Tasks 04, 06, and review follow-up Tasks 12–32
 
 ## Goal
 
 Reject unreproducible or incompatible changes before producing a release
 artifact.
+
+Complete the 2026-10-14 local review follow-up Tasks 22–32 before resuming this
+task. Reuse the corrected schema checker and safely diagnosable browser suite;
+local success does not replace the remote workflow verification below.
 
 Task 21 supplies the repository-only workflow and artifact gates. Reuse that
 work here and complete the remaining disposable-database, browser, and remote

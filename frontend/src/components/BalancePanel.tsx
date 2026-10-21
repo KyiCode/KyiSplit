@@ -94,11 +94,24 @@ function BalancePanel({
                 </div>
             )}
 
+            {loading && data && (
+                <p className="balance-refresh-status" role="status" aria-live="polite">
+                    Refreshing balances. Values and suggestions below are from
+                    the last successful load.
+                </p>
+            )}
+
             {error && (
                 <div className="notice error small" role="alert">
                     <span>{error}</span>
                     <button onClick={onRetry}>Retry balances</button>
                 </div>
+            )}
+
+            {data && error && (
+                <p className="balance-refresh-status" role="status" aria-live="polite">
+                    Showing balances and suggestions from the last successful load.
+                </p>
             )}
 
             {data && (

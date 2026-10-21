@@ -1,19 +1,33 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { loadEnvFile } from 'node:process'
 import { defineConfig, devices } from '@playwright/test'
 import { SAFE_BROWSER_ARTIFACT_OPTIONS } from './e2e/artifactSafety'
-
-const localEnvironmentFile = path.resolve('.env.e2e.local')
-if (fs.existsSync(localEnvironmentFile)) loadEnvFile(localEnvironmentFile)
+import { safeDiagnosticRecord } from './e2e/safeDiagnostics.mjs'
 
 const frontendOrigin = 'http://127.0.0.1:5510'
 const fxOrigin = 'http://127.0.0.1:5512'
 const stateFile = path.resolve('test-results/e2e-database.json')
+const diagnosticFile = path.resolve('test-results/e2e-safe-diagnostic.json')
+
+function recordDiagnostic(stage: string, category: string) {
+  try {
+    fs.mkdirSync(path.dirname(diagnosticFile), { recursive: true })
+    fs.writeFileSync(
+      diagnosticFile,
+      JSON.stringify(safeDiagnosticRecord(stage, category)),
+      'utf8',
+    )
+  } catch {
+    // The launcher will emit a generic safe startup category if recording fails.
+  }
+}
 
 function required(name: 'E2E_POSTGRES_BIN_DIR' | 'E2E_POSTGRES_TEMPLATE_DIR') {
   const value = process.env[name]?.trim()
-  if (!value) throw new Error(`${name} must be explicitly configured`)
+  if (!value) {
+    recordDiagnostic('configuration', 'missing-required-setting')
+    throw new Error('E2E configuration is invalid')
+  }
   return value
 }
 
@@ -27,6 +41,7 @@ const postgresRunRoot = path.resolve('test-results/postgres')
 Object.assign(process.env, {
   E2E_DATABASE_NAME: databaseName,
   E2E_DATABASE_USER: databaseUser,
+  E2E_DIAGNOSTIC_FILE: diagnosticFile,
   E2E_POSTGRES_BIN_DIR: postgresBinDirectory,
   E2E_POSTGRES_PORT: postgresPort,
   E2E_POSTGRES_RUN_ROOT: postgresRunRoot,
@@ -55,6 +70,7 @@ export default defineConfig({
       name: 'setup',
       testMatch: /global\.setup\.ts/,
       teardown: 'cleanup',
+      use: { browserName: 'chromium' },
     },
     {
       name: 'cleanup',
@@ -70,7 +86,7 @@ export default defineConfig({
   webServer: [
     {
       name: 'packaged-application',
-      command: 'npm --prefix ../backend run e2e:server',
+      command: 'node ./e2e/startPackagedServer.mjs',
       url: `${frontendOrigin}/api/users/verifysession`,
       reuseExistingServer: false,
       timeout: 60_000,
@@ -81,6 +97,7 @@ export default defineConfig({
         BCRYPT_SALT: '4',
         E2E_DATABASE_NAME: databaseName,
         E2E_DATABASE_USER: databaseUser,
+        E2E_DIAGNOSTIC_FILE: diagnosticFile,
         E2E_FX_PORT: '5512',
         E2E_POSTGRES_BIN_DIR: postgresBinDirectory,
         E2E_POSTGRES_PORT: postgresPort,

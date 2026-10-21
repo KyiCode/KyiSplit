@@ -60,3 +60,47 @@ status remain owned by `roadmap/README.md`, the active phase `README.md`,
 - Expense correction is explicitly delete and recreate. Settlement
   suggestions remain derived, and repayment recording always requires an
   explicit user action.
+
+## 2026-10-14 Local Review Planning Handoff
+
+- Phase 04 remains the single active phase. Tasks 22–32 add an ordered,
+  26-point follow-up before the remaining Task 07 release verification.
+- The prior review passed 232 backend tests, 69 frontend tests, frontend lint,
+  backend/frontend builds, and a synthetic local API journey. Live schema
+  compatibility and isolated browser E2E checks failed. These are prior review
+  results, not verification of the newly planned tasks.
+- The local/prod profile implementation and ignored local demo database already
+  exist; Task 22 validates that work. The hosted connection was rejected by
+  Supabase during the review and requires current external configuration for
+  the production-like environment. Do not record its credentials here.
+- Reference-schema catalog rejection and insufficient browser startup
+  diagnostics are reproduced gaps. The E2E failure's exact stage remains to be
+  diagnosed; do not label its cause without evidence.
+- Keep larger product changes deferred: in-place expense editing and audit
+  history, self-service password recovery, individual session revocation, new
+  signup/access controls, schema-backed request idempotency, pagination, and
+  group-query batching. These require separate scope/product decisions; editing
+  would replace the existing delete-and-recreate correction policy.
+- Existing Tasks 09 and 10 own operational recovery and private onboarding.
+  Task 10 now calls for an accurate maintainer-assisted recovery/access procedure
+  and explicit documentation of current session and deployed-access limits.
+
+## 2026-10-21 Task 32 Review Handoff
+
+- The complete isolated Chromium suite passed twice after the final Task 32 E2E
+  changes. Backend tests passed 279 tests across 28 files; frontend tests passed
+  88 tests across 16 files. Backend build, frontend lint, and frontend build
+  passed.
+- The explicit disposable PostgreSQL schema gate passed. The release artifact
+  audit found no local profiles, browser state, demo credentials, or application
+  database target.
+- Added browser coverage for local date defaults, stale-balance recovery,
+  expense ordering, clipboard failure, narrow layout, long names and amounts,
+  loading announcements, and keyboard focus visibility.
+- TDD caught and fixed rejection of large decimal amounts caused by floating
+  point tolerance. The browser journey also now waits for asynchronous sign-in
+  navigation and follows the app's automatic navigation after group creation.
+- Manual desktop, zoom, contrast, and assistive-technology review remains
+  unresolved because no browser was available through computer control. These
+  checks have not been claimed as passed; Task 32 remains active and Task 07
+  has not resumed.

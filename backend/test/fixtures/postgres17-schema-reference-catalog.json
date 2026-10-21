@@ -1,0 +1,1142 @@
+{
+  "columns": [
+    {
+      "table_name": "groups",
+      "column_name": "id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "groups",
+      "column_name": "name",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "groups",
+      "column_name": "default_currency",
+      "column_type": "character varying(3)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "group_members",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "group_members",
+      "column_name": "user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "group_members",
+      "column_name": "user_group_name",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "users",
+      "column_name": "id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "users",
+      "column_name": "email",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "users",
+      "column_name": "password",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "id",
+      "column_type": "integer",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "token",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "created_by",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": true
+    },
+    {
+      "table_name": "invites",
+      "column_name": "expires_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "name",
+      "column_type": "character varying",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "total",
+      "column_type": "kyisplit_money",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "date",
+      "column_type": "date",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expenses",
+      "column_name": "currency",
+      "column_type": "character varying(3)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "payments",
+      "column_name": "expense_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "payments",
+      "column_name": "user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "payments",
+      "column_name": "amount",
+      "column_type": "kyisplit_money",
+      "is_not_null": true
+    },
+    {
+      "table_name": "payments",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "splits",
+      "column_name": "expense_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "splits",
+      "column_name": "user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "splits",
+      "column_name": "amount",
+      "column_type": "kyisplit_money",
+      "is_not_null": true
+    },
+    {
+      "table_name": "splits",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "expense_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "source_currency",
+      "column_type": "character varying(3)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "target_currency",
+      "column_type": "character varying(3)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "rate",
+      "column_type": "numeric(24,12)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "provider",
+      "column_type": "character varying(100)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "provider_effective_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": false
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "column_name": "captured_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "group_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "payer_user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "receiver_user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "amount",
+      "column_type": "kyisplit_money",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "currency",
+      "column_type": "character varying(3)",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "repayment_date",
+      "column_type": "date",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "recorded_by_user_id",
+      "column_type": "uuid",
+      "is_not_null": true
+    },
+    {
+      "table_name": "repayments",
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "is_not_null": true
+    }
+  ],
+  "constraints": [
+    {
+      "object_name": "groups",
+      "object_kind": "unique",
+      "columns": [
+        "id",
+        "default_currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "UNIQUE (id, default_currency)",
+      "is_validated": true
+    },
+    {
+      "object_name": "groups",
+      "object_kind": "primary",
+      "columns": [
+        "id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "groups",
+      "object_kind": "check",
+      "columns": [
+        "default_currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (default_currency::text ~ '^[A-Z]{3}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "groups",
+      "object_kind": "check",
+      "columns": [
+        "name"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (name::text = btrim(name::text) AND char_length(name::text) >= 1 AND char_length(name::text) <= 100)",
+      "is_validated": true
+    },
+    {
+      "object_name": "group_members",
+      "object_kind": "foreign",
+      "columns": [
+        "user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "users",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "group_members",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "group_members",
+      "object_kind": "primary",
+      "columns": [
+        "group_id",
+        "user_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (group_id, user_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "group_members",
+      "object_kind": "check",
+      "columns": [
+        "user_group_name"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (user_group_name::text = btrim(user_group_name::text) AND char_length(user_group_name::text) >= 1 AND char_length(user_group_name::text) <= 50)",
+      "is_validated": true
+    },
+    {
+      "object_name": "users",
+      "object_kind": "unique",
+      "columns": [
+        "email"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "UNIQUE (email)",
+      "is_validated": true
+    },
+    {
+      "object_name": "users",
+      "object_kind": "primary",
+      "columns": [
+        "id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "users",
+      "object_kind": "check",
+      "columns": [
+        "email"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (email::text = lower(btrim(email::text)) AND char_length(email::text) >= 1 AND char_length(email::text) <= 254 AND email::text ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "foreign",
+      "columns": [
+        "created_by"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "users",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "unique",
+      "columns": [
+        "token"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "UNIQUE (token)",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "primary",
+      "columns": [
+        "id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "check",
+      "columns": [
+        "expires_at",
+        "created_at"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (expires_at > created_at)",
+      "is_validated": true
+    },
+    {
+      "object_name": "invites",
+      "object_kind": "check",
+      "columns": [
+        "token"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (token::text ~ '^[0-9a-f]{64}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "unique",
+      "columns": [
+        "id",
+        "currency",
+        "group_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "UNIQUE (id, currency, group_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "unique",
+      "columns": [
+        "id",
+        "group_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "UNIQUE (id, group_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "primary",
+      "columns": [
+        "id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "check",
+      "columns": [
+        "currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (currency::text ~ '^[A-Z]{3}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "check",
+      "columns": [
+        "total"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (total::numeric > 0::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expenses",
+      "object_kind": "check",
+      "columns": [
+        "name"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (name::text = btrim(name::text) AND char_length(name::text) >= 1 AND char_length(name::text) <= 120)",
+      "is_validated": true
+    },
+    {
+      "object_name": "payments",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "group_members",
+      "referenced_columns": [
+        "group_id",
+        "user_id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, user_id) REFERENCES group_members(group_id, user_id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "payments",
+      "object_kind": "foreign",
+      "columns": [
+        "expense_id",
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "expenses",
+      "referenced_columns": [
+        "id",
+        "group_id"
+      ],
+      "delete_action": "CASCADE",
+      "definition": "FOREIGN KEY (expense_id, group_id) REFERENCES expenses(id, group_id) ON DELETE CASCADE",
+      "is_validated": true
+    },
+    {
+      "object_name": "payments",
+      "object_kind": "primary",
+      "columns": [
+        "expense_id",
+        "user_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (expense_id, user_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "payments",
+      "object_kind": "check",
+      "columns": [
+        "amount"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (amount::numeric > 0::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "payments",
+      "object_kind": "foreign",
+      "columns": [
+        "user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "users",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "splits",
+      "object_kind": "foreign",
+      "columns": [
+        "user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "users",
+      "referenced_columns": [
+        "id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "splits",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "group_members",
+      "referenced_columns": [
+        "group_id",
+        "user_id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, user_id) REFERENCES group_members(group_id, user_id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "splits",
+      "object_kind": "foreign",
+      "columns": [
+        "expense_id",
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "expenses",
+      "referenced_columns": [
+        "id",
+        "group_id"
+      ],
+      "delete_action": "CASCADE",
+      "definition": "FOREIGN KEY (expense_id, group_id) REFERENCES expenses(id, group_id) ON DELETE CASCADE",
+      "is_validated": true
+    },
+    {
+      "object_name": "splits",
+      "object_kind": "primary",
+      "columns": [
+        "expense_id",
+        "user_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (expense_id, user_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "splits",
+      "object_kind": "check",
+      "columns": [
+        "amount"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (amount::numeric > 0::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "target_currency"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id",
+        "default_currency"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, target_currency) REFERENCES groups(id, default_currency) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "foreign",
+      "columns": [
+        "expense_id",
+        "source_currency",
+        "group_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "expenses",
+      "referenced_columns": [
+        "id",
+        "currency",
+        "group_id"
+      ],
+      "delete_action": "CASCADE",
+      "definition": "FOREIGN KEY (expense_id, source_currency, group_id) REFERENCES expenses(id, currency, group_id) ON DELETE CASCADE",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "primary",
+      "columns": [
+        "expense_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (expense_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "check",
+      "columns": [
+        "provider"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (provider::text = btrim(provider::text) AND char_length(provider::text) >= 1 AND char_length(provider::text) <= 100)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "check",
+      "columns": [
+        "source_currency",
+        "target_currency",
+        "rate"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (source_currency::text <> target_currency::text OR rate = 1::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "check",
+      "columns": [
+        "rate"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (rate > 0::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "check",
+      "columns": [
+        "target_currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (target_currency::text ~ '^[A-Z]{3}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "expense_fx_snapshots",
+      "object_kind": "check",
+      "columns": [
+        "source_currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (source_currency::text ~ '^[A-Z]{3}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "recorded_by_user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "group_members",
+      "referenced_columns": [
+        "group_id",
+        "user_id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, recorded_by_user_id) REFERENCES group_members(group_id, user_id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "receiver_user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "group_members",
+      "referenced_columns": [
+        "group_id",
+        "user_id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, receiver_user_id) REFERENCES group_members(group_id, user_id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "payer_user_id"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "group_members",
+      "referenced_columns": [
+        "group_id",
+        "user_id"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, payer_user_id) REFERENCES group_members(group_id, user_id) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "foreign",
+      "columns": [
+        "group_id",
+        "currency"
+      ],
+      "referenced_schema": "public",
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id",
+        "default_currency"
+      ],
+      "delete_action": "RESTRICT",
+      "definition": "FOREIGN KEY (group_id, currency) REFERENCES groups(id, default_currency) ON DELETE RESTRICT",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "primary",
+      "columns": [
+        "id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "PRIMARY KEY (id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "check",
+      "columns": [
+        "currency"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (currency::text ~ '^[A-Z]{3}$'::text)",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "check",
+      "columns": [
+        "amount"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (amount::numeric > 0::numeric)",
+      "is_validated": true
+    },
+    {
+      "object_name": "repayments",
+      "object_kind": "check",
+      "columns": [
+        "payer_user_id",
+        "receiver_user_id"
+      ],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (payer_user_id <> receiver_user_id)",
+      "is_validated": true
+    },
+    {
+      "object_name": "kyisplit_money",
+      "object_kind": "domain",
+      "columns": [],
+      "referenced_schema": null,
+      "referenced_table": null,
+      "referenced_columns": [],
+      "delete_action": null,
+      "definition": "CHECK (scale(VALUE) <= 2 AND abs(VALUE) < '10000000000000000'::bigint::numeric)",
+      "is_validated": true
+    }
+  ],
+  "indexes": [
+    {
+      "table_name": "users",
+      "is_unique": true,
+      "is_valid": true,
+      "definition": "CREATE UNIQUE INDEX users_email_lower_key ON public.users USING btree (lower((email)::text))"
+    },
+    {
+      "table_name": "repayments",
+      "is_unique": false,
+      "is_valid": true,
+      "definition": "CREATE INDEX repayments_group_order_idx ON public.repayments USING btree (group_id, repayment_date DESC, created_at DESC, id DESC)"
+    }
+  ],
+  "triggers": [
+    {
+      "table_name": "expenses",
+      "enabled_state": "O",
+      "is_before": false,
+      "event_insert": true,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": true,
+      "is_deferrable": true,
+      "is_initially_deferred": true,
+      "function_name": "kyisplit_assert_expense_has_fx",
+      "function_schema": "public"
+    },
+    {
+      "table_name": "expenses",
+      "enabled_state": "O",
+      "is_before": false,
+      "event_insert": true,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": true,
+      "is_deferrable": true,
+      "is_initially_deferred": true,
+      "function_name": "kyisplit_assert_expense_balanced",
+      "function_schema": "public"
+    },
+    {
+      "table_name": "payments",
+      "enabled_state": "O",
+      "is_before": false,
+      "event_insert": true,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": true,
+      "is_deferrable": true,
+      "is_initially_deferred": true,
+      "function_name": "kyisplit_assert_expense_balanced",
+      "function_schema": "public"
+    },
+    {
+      "table_name": "splits",
+      "enabled_state": "O",
+      "is_before": false,
+      "event_insert": true,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": true,
+      "is_deferrable": true,
+      "is_initially_deferred": true,
+      "function_name": "kyisplit_assert_expense_balanced",
+      "function_schema": "public"
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "enabled_state": "O",
+      "is_before": false,
+      "event_insert": true,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": true,
+      "is_deferrable": true,
+      "is_initially_deferred": true,
+      "function_name": "kyisplit_assert_expense_has_fx",
+      "function_schema": "public"
+    },
+    {
+      "table_name": "expense_fx_snapshots",
+      "enabled_state": "O",
+      "is_before": true,
+      "event_insert": false,
+      "event_update": true,
+      "event_delete": true,
+      "event_truncate": false,
+      "row_level": true,
+      "is_constraint": false,
+      "is_deferrable": false,
+      "is_initially_deferred": false,
+      "function_name": "kyisplit_protect_expense_fx",
+      "function_schema": "public"
+    }
+  ],
+  "functions": [
+    {
+      "schema_name": "public",
+      "name": "kyisplit_assert_expense_balanced",
+      "language": "plpgsql",
+      "body": "\r\nDECLARE\r\n    affected_ids uuid[];\r\n    affected_id uuid;\r\n    expense_total numeric;\r\n    payment_total numeric;\r\n    split_total numeric;\r\nBEGIN\r\n    IF TG_TABLE_NAME = 'expenses' THEN\r\n        IF TG_OP = 'DELETE' THEN\r\n            affected_ids := ARRAY[OLD.id];\r\n        ELSE\r\n            affected_ids := ARRAY[NEW.id];\r\n        END IF;\r\n    ELSIF TG_OP = 'INSERT' THEN\r\n        affected_ids := ARRAY[NEW.expense_id];\r\n    ELSIF TG_OP = 'DELETE' THEN\r\n        affected_ids := ARRAY[OLD.expense_id];\r\n    ELSE\r\n        affected_ids := ARRAY[OLD.expense_id, NEW.expense_id];\r\n    END IF;\r\n\r\n    FOR affected_id IN SELECT DISTINCT unnest(affected_ids)\r\n    LOOP\r\n        SELECT\r\n            expense.total,\r\n            COALESCE((\r\n                SELECT sum(payment.amount)\r\n                FROM public.payments AS payment\r\n                WHERE payment.expense_id = expense.id\r\n            ), 0),\r\n            COALESCE((\r\n                SELECT sum(split.amount)\r\n                FROM public.splits AS split\r\n                WHERE split.expense_id = expense.id\r\n            ), 0)\r\n        INTO expense_total, payment_total, split_total\r\n        FROM public.expenses AS expense\r\n        WHERE expense.id = affected_id;\r\n\r\n        IF NOT FOUND THEN\r\n            CONTINUE;\r\n        END IF;\r\n        IF payment_total <> expense_total THEN\r\n            RAISE EXCEPTION\r\n                'Expense % payments sum % does not equal total %',\r\n                affected_id, payment_total, expense_total;\r\n        END IF;\r\n        IF split_total <> expense_total THEN\r\n            RAISE EXCEPTION\r\n                'Expense % splits sum % does not equal total %',\r\n                affected_id, split_total, expense_total;\r\n        END IF;\r\n    END LOOP;\r\n\r\n    RETURN NULL;\r\nEND\r\n"
+    },
+    {
+      "schema_name": "public",
+      "name": "kyisplit_protect_expense_fx",
+      "language": "plpgsql",
+      "body": "\r\nBEGIN\r\n    IF TG_OP = 'UPDATE' THEN\r\n        RAISE EXCEPTION 'Expense FX snapshot % is immutable', OLD.expense_id;\r\n    END IF;\r\n    IF EXISTS (\r\n        SELECT 1 FROM public.expenses WHERE id = OLD.expense_id\r\n    ) THEN\r\n        RAISE EXCEPTION\r\n            'Expense FX snapshot % is immutable while its expense exists',\r\n            OLD.expense_id;\r\n    END IF;\r\n    RETURN OLD;\r\nEND\r\n"
+    },
+    {
+      "schema_name": "public",
+      "name": "kyisplit_assert_expense_has_fx",
+      "language": "plpgsql",
+      "body": "\r\nDECLARE\r\n    affected_id uuid;\r\nBEGIN\r\n    IF TG_TABLE_NAME = 'expenses' THEN\r\n        affected_id := CASE\r\n            WHEN TG_OP = 'DELETE' THEN OLD.id\r\n            ELSE NEW.id\r\n        END;\r\n    ELSE\r\n        affected_id := CASE\r\n            WHEN TG_OP = 'DELETE' THEN OLD.expense_id\r\n            ELSE NEW.expense_id\r\n        END;\r\n    END IF;\r\n\r\n    IF EXISTS (\r\n        SELECT 1 FROM public.expenses WHERE id = affected_id\r\n    ) AND NOT EXISTS (\r\n        SELECT 1\r\n        FROM public.expense_fx_snapshots\r\n        WHERE expense_id = affected_id\r\n          AND rate IS NOT NULL\r\n          AND provider IS NOT NULL\r\n    ) THEN\r\n        RAISE EXCEPTION\r\n            'Expense % is missing a finalized FX snapshot', affected_id;\r\n    END IF;\r\n    RETURN NULL;\r\nEND\r\n"
+    }
+  ]
+}

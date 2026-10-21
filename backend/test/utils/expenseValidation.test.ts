@@ -21,8 +21,11 @@ describe("money parsing", () => {
     it.each([
         ["0", 0],
         ["1.20", 120],
+        ["1234567.89", 123456789],
+        ["90071992547409.91", Number.MAX_SAFE_INTEGER],
         [0.1, 10],
-        [12.34, 1234]
+        [12.34, 1234],
+        [1234567.89, 123456789]
     ])("parses %p into integer cents", (input, cents) => {
         expect(parseMoneyToCents(input)).toBe(cents)
     })
@@ -30,6 +33,7 @@ describe("money parsing", () => {
     it.each([
         -1,
         "1.001",
+        "90071992547409.92",
         ".50",
         "1.",
         "not-money",

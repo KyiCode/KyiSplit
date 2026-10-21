@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
@@ -18,6 +18,28 @@ const expense = {
   date: '2026-07-30',
   createdAt: '2026-07-30T10:00:00.000Z',
   currency: 'USD',
+}
+
+function expenseDetail(overrides: Record<string, unknown> = {}) {
+  return {
+    expense: {
+      ...expense,
+      paidBy: [{ userId: 'user-1', amount: '12.30' }],
+      splits: [
+        { userId: 'user-1', amount: '4.10' },
+        { userId: 'user-2', amount: '8.20' },
+      ],
+      fxSnapshot: {
+        sourceCurrency: 'USD',
+        targetCurrency: 'SGD',
+        rate: '1.350000000000',
+        provider: 'frankfurter',
+        effectiveAt: '2026-07-29T00:00:00.000Z',
+        capturedAt: '2026-07-30T10:00:00.000Z',
+      },
+      ...overrides,
+    },
+  }
 }
 
 const groupResponse = {
@@ -42,6 +64,7 @@ const balanceResponse = {
 function initialResponses(
   expenses = [expense],
   balances: Response | Error = successResponse(balanceResponse),
+  details: Response | Error = successResponse(expenseDetail()),
 ) {
   return [
     successResponse(groupResponse),
@@ -49,6 +72,7 @@ function initialResponses(
     successResponse(membersResponse),
     balances,
     successResponse({ repayments: [] }),
+    details,
   ] as const
 }
 
@@ -101,11 +125,155 @@ test('presents stored expense detail and the correction policy', async () => {
   const dialog = screen.getByRole('dialog', {
     name: 'Dinner expense details',
   })
-  expect(within(dialog).getByText('USD 12.30')).toBeInTheDocument()
+  expect(within(dialog).getByText('USD 12.30', { selector: 'dd' }))
+    .toBeInTheDocument()
   expect(within(dialog).getByText('30 Jul 2026')).toBeInTheDocument()
+  expect(within(dialog).getByRole('list', { name: 'Payers' }))
+    .toHaveTextContent('KaiUSD 12.30')
+  expect(within(dialog).getByRole('list', { name: 'Shares' }))
+    .toHaveTextContent('SamUSD 8.20')
+  expect(within(dialog).getByText(/1 USD = 1\.350000000000 SGD/))
+    .toBeInTheDocument()
+  expect(within(dialog).getByText(/saved rate is fixed for this expense/i))
+    .toBeInTheDocument()
   expect(within(dialog).getByText(
     /To correct this expense, delete it and create it again/,
   )).toBeInTheDocument()
+})
+
+test('shows same-currency allocations without a conversion message', async () => {
+  const user = userEvent.setup()
+  installFetchQueue(...initialResponses([expense], successResponse(balanceResponse),
+    successResponse(expenseDetail({
+      currency: 'SGD',
+      paidBy: [{ userId: 'user-1', amount: '12.30' }],
+      splits: [{ userId: 'user-2', amount: '12.30' }],
+      fxSnapshot: {
+        sourceCurrency: 'SGD',
+        targetCurrency: 'SGD',
+        rate: '1.000000000000',
+        provider: 'identity',
+        effectiveAt: null,
+        capturedAt: '2026-07-30T10:00:00.000Z',
+      },
+    }))))
+  renderGroup()
+
+  await user.click(await screen.findByRole('button', {
+    name: 'View details for Dinner',
+  }))
+  const dialog = screen.getByRole('dialog', {
+    name: 'Dinner expense details',
+  })
+  expect(await within(dialog).findByRole('list', { name: 'Shares' }))
+    .toHaveTextContent('SamSGD 12.30')
+  expect(within(dialog).queryByText(/saved conversion rate/i))
+    .not.toBeInTheDocument()
+})
+
+test('shows detail loading and retries after an offline failure', async () => {
+  const user = userEvent.setup()
+  installFetchQueue(
+    ...initialResponses([expense], successResponse(balanceResponse),
+      new Error('offline')),
+    successResponse(expenseDetail()),
+  )
+  renderGroup()
+
+  await user.click(await screen.findByRole('button', {
+    name: 'View details for Dinner',
+  }))
+  const dialog = screen.getByRole('dialog', {
+    name: 'Dinner expense details',
+  })
+  expect(await within(dialog).findByRole('alert'))
+    .toHaveTextContent('You’re offline. Reconnect to load expense details.')
+  await user.click(within(dialog).getByRole('button', {
+    name: 'Retry details',
+  }))
+  expect(await within(dialog).findByRole('list', { name: 'Payers' }))
+    .toHaveTextContent('KaiUSD 12.30')
+})
+
+test.each([
+  [failureResponse('Forbidden', 403, 'FORBIDDEN'), 'You no longer have access to these expense details.'],
+  [failureResponse('Missing', 404, 'NOT_FOUND'), 'This expense could not be found. Refresh activity and try again.'],
+  [successResponse({ expense: { ...expense, paidBy: [], splits: [] } }), 'Saved expense details are incomplete or malformed.'],
+])('explains unavailable or malformed expense detail', async (detailResponse, message) => {
+  const user = userEvent.setup()
+  installFetchQueue(...initialResponses([expense], successResponse(balanceResponse), detailResponse))
+  renderGroup()
+
+  await user.click(await screen.findByRole('button', {
+    name: 'View details for Dinner',
+  }))
+
+  const dialog = screen.getByRole('dialog', { name: 'Dinner expense details' })
+  expect(await within(dialog).findByRole('alert')).toHaveTextContent(message)
+  expect(within(dialog).getByRole('button', { name: 'Retry details' }))
+    .toBeInTheDocument()
+})
+
+test('does not show the previous expense breakdown while another loads', async () => {
+  const user = userEvent.setup()
+  let detailRequests = 0
+  const fetchMock = vi.fn<typeof fetch>((input) => {
+    const url = String(input)
+    if (url.endsWith('/api/groups/group-1')) {
+      return Promise.resolve(successResponse(groupResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/members')) {
+      return Promise.resolve(successResponse(membersResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/getbalance')) {
+      return Promise.resolve(successResponse(balanceResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/repayments')) {
+      return Promise.resolve(successResponse({ repayments: [] }))
+    }
+    if (url.endsWith('/api/expenses/group-1')) {
+      return Promise.resolve(successResponse({ expenses: [
+        expense,
+        { ...expense, expenseId: 'expense-2', expenseName: 'Taxi' },
+      ] }))
+    }
+    if (url.includes('/api/expenses/group-1/') && !url.endsWith('expense-2')) {
+      return Promise.resolve(successResponse(expenseDetail()))
+    }
+    if (url.endsWith('/api/expenses/group-1/expense-2')) {
+      detailRequests += 1
+      if (detailRequests === 1) return new Promise<Response>(() => {})
+      return Promise.resolve(successResponse(expenseDetail({
+        expenseId: 'expense-2',
+        expenseName: 'Taxi',
+      })))
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  renderGroup()
+
+  await user.click(await screen.findByRole('button', {
+    name: 'View details for Dinner',
+  }))
+  const dialog = screen.getByRole('dialog', {
+    name: 'Dinner expense details',
+  })
+  expect(await within(dialog).findByRole('list', { name: 'Payers' }))
+    .toHaveTextContent('KaiUSD 12.30')
+  await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+  await user.click(screen.getByRole('button', {
+    name: 'View details for Taxi',
+  }))
+
+  const taxiDialog = screen.getByRole('dialog', {
+    name: 'Taxi expense details',
+  })
+  expect(await within(taxiDialog).findByRole('status', {
+    name: 'Loading expense details',
+  })).toBeInTheDocument()
+  expect(within(taxiDialog).queryByRole('list', { name: 'Payers' }))
+    .not.toBeInTheDocument()
 })
 
 test('exposes activity and members as named lists', async () => {
@@ -142,9 +310,28 @@ test('cancels confirmation with the button or Escape and keeps the row', async (
 
   await user.click(screen.getByRole('button', { name: 'Delete expense' }))
   dialog = screen.getByRole('dialog', { name: 'Delete Dinner?' })
+  const keepExpense = within(dialog).getByRole('button', {
+    name: 'Keep expense',
+  })
+  expect(keepExpense).toHaveFocus()
+  await user.keyboard('{Enter}')
+  expect(screen.getByRole('dialog', {
+    name: 'Dinner expense details',
+  })).toBeInTheDocument()
+  const deleteExpense = screen.getByRole('button', { name: 'Delete expense' })
+  expect(deleteExpense).toHaveFocus()
+
+  await user.keyboard('{Enter}')
+  dialog = screen.getByRole('dialog', { name: 'Delete Dinner?' })
+  expect(within(dialog).getByRole('button', {
+    name: 'Keep expense',
+  })).toHaveFocus()
+  await user.tab()
   expect(within(dialog).getByRole('button', {
     name: 'Delete expense',
   })).toHaveFocus()
+  await user.tab()
+  expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   const restoredExpense = screen.getByRole('button', {
@@ -152,6 +339,94 @@ test('cancels confirmation with the button or Escape and keeps the row', async (
   })
   expect(restoredExpense).toBeInTheDocument()
   expect(restoredExpense).toHaveFocus()
+})
+
+test('announces retained balances as stale during and after refresh', async () => {
+  const user = userEvent.setup()
+  let rejectBalance!: (error: Error) => void
+  let balanceRequests = 0
+  const pendingBalance = new Promise<Response>((_resolve, reject) => {
+    rejectBalance = reject
+  })
+  const previous = {
+    currency: 'SGD',
+    balances: [
+      { userId: 'user-2', amount: '-1.00' },
+      { userId: 'user-1', amount: '1.00' },
+      { userId: 'user-3', amount: '0.00' },
+    ],
+    settlements: [{
+      payerUserId: 'user-2',
+      receiverUserId: 'user-1',
+      amount: '1.00',
+    }],
+  }
+  const fetchMock = vi.fn<typeof fetch>((input, options) => {
+    const url = String(input)
+    if (url.endsWith('/api/groups/group-1')) {
+      return Promise.resolve(successResponse(groupResponse))
+    }
+    if (url.endsWith('/api/expenses/group-1')) {
+      return Promise.resolve(successResponse({ expenses: [expense] }))
+    }
+    if (url.endsWith('/api/groups/group-1/members')) {
+      return Promise.resolve(successResponse(membersResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/getbalance')) {
+      balanceRequests += 1
+      if (balanceRequests === 1) return Promise.resolve(successResponse(previous))
+      if (balanceRequests === 2) return pendingBalance
+      return Promise.resolve(successResponse(balanceResponse))
+    }
+    if (url.endsWith('/api/groups/group-1/repayments')) {
+      if ((options as RequestInit | undefined)?.method === 'POST') {
+        return Promise.resolve(successResponse({ repaymentId: 'repayment-2' }, 201))
+      }
+      return Promise.resolve(successResponse({ repayments: [] }))
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  renderGroup()
+  const balances = await screen.findByRole('region', { name: 'Balances' })
+  expect(within(balances).getByRole('list', {
+    name: 'Settlement suggestions',
+  })).toHaveTextContent('Sam pays Kai')
+
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Payer' }), 'user-2')
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Receiver' }), 'user-1')
+  await user.type(screen.getByRole('spinbutton', { name: 'Amount' }), '1.00')
+  fireEvent.change(screen.getByLabelText('Repayment date'), {
+    target: { value: '2026-07-30' },
+  })
+  await user.click(screen.getByRole('button', { name: 'Record repayment' }))
+
+  expect(await within(balances).findByRole('status'))
+    .toHaveTextContent('Refreshing balances. Values and suggestions below are from the last successful load.')
+  expect(within(balances).getByRole('list', {
+    name: 'Settlement suggestions',
+  })).toHaveTextContent('Sam pays Kai')
+
+  rejectBalance(new Error('offline'))
+  expect(await within(balances).findByText(
+    'Showing balances and suggestions from the last successful load.',
+  ))
+    .toBeInTheDocument()
+  expect(within(balances).getByRole('alert'))
+    .toHaveTextContent('You’re offline. Reconnect to load balances.')
+  expect(within(balances).getByRole('list', {
+    name: 'Settlement suggestions',
+  })).toHaveTextContent('Sam pays Kai')
+
+  await user.click(within(balances).getByRole('button', {
+    name: 'Retry balances',
+  }))
+  expect(await within(balances).findByText('No repayments needed.'))
+    .toBeInTheDocument()
+  expect(fetchMock.mock.calls.filter(([url, options]) => (
+    String(url).endsWith('/api/groups/group-1/repayments') &&
+    (options as RequestInit | undefined)?.method === 'POST'
+  ))).toHaveLength(1)
 })
 
 test('disables duplicate deletion while the request is pending', async () => {
@@ -166,6 +441,7 @@ test('disables duplicate deletion while the request is pending', async () => {
     .mockResolvedValueOnce(initialResponses()[2])
     .mockResolvedValueOnce(initialResponses()[3] as Response)
     .mockResolvedValueOnce(initialResponses()[4] as Response)
+    .mockResolvedValueOnce(initialResponses()[5] as Response)
     .mockImplementationOnce(() => pendingDelete)
     .mockResolvedValueOnce(successResponse({ expenses: [] }))
     .mockResolvedValueOnce(successResponse(balanceResponse))
@@ -181,7 +457,7 @@ test('disables duplicate deletion while the request is pending', async () => {
   expect(within(dialog).getByRole('button', {
     name: 'Deleting expense…',
   })).toBeDisabled()
-  expect(fetchMock).toHaveBeenCalledTimes(6)
+  expect(fetchMock).toHaveBeenCalledTimes(7)
   resolveDelete(successResponse({ expenseId: 'expense-1' }))
   expect(await screen.findByRole('heading', {
     name: 'Nothing split yet',
@@ -232,8 +508,12 @@ test('keeps a confirmed deletion and retries activity sync without deleting agai
     if (url.endsWith('/api/groups/group-1/repayments')) {
       return Promise.resolve(successResponse({ repayments: [] }))
     }
-    if (url.endsWith('/api/expenses/group-1/expense-1')) {
+    if (url.endsWith('/api/expenses/group-1/expense-1') &&
+      (options as RequestInit | undefined)?.method === 'DELETE') {
       return Promise.resolve(successResponse({ expenseId: 'expense-1' }))
+    }
+    if (url.endsWith('/api/expenses/group-1/expense-1')) {
+      return Promise.resolve(successResponse(expenseDetail()))
     }
     if (url.endsWith('/api/expenses/group-1')) {
       activityRequests += 1
@@ -478,8 +758,8 @@ test('retries balances independently without reordering suggestions', async () =
     ...initialResponses(
       [expense],
       failureResponse('Broken', 500, 'DATA_INTEGRITY_ERROR'),
+      successResponse(recovered),
     ),
-    successResponse(recovered),
   )
   renderGroup()
 

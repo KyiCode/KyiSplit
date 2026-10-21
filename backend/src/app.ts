@@ -99,12 +99,29 @@ function validateFrontendRoot(frontendRoot: string) {
     return resolved
 }
 
-const logUnhandledRequestError: ErrorRequestHandler = (
+export const logUnhandledRequestError: ErrorRequestHandler = (
     error,
     request,
     response,
     next
 ) => {
+    if (isMalformedJsonError(error)) {
+        logger.warn('request_body_rejected', {
+            method: request.method,
+            operation: 'request_json_parse'
+        })
+        if (response.headersSent) {
+            next(error)
+            return
+        }
+        sendFailure(
+            response,
+            400,
+            'VALIDATION_ERROR',
+            'Invalid JSON request body'
+        )
+        return
+    }
     if (isBodyTooLargeError(error)) {
         logger.warn('request_body_rejected', {
             method: request.method,
@@ -126,6 +143,16 @@ const logUnhandledRequestError: ErrorRequestHandler = (
         return
     }
     sendFailure(response, 500, 'INTERNAL_ERROR', 'Server error')
+}
+
+function isMalformedJsonError(
+    error: unknown
+): error is SyntaxError & { type: 'entity.parse.failed' } {
+    return Boolean(
+        error instanceof SyntaxError &&
+        'type' in error &&
+        error.type === 'entity.parse.failed'
+    )
 }
 
 function isBodyTooLargeError(error: unknown): error is { type: string } {

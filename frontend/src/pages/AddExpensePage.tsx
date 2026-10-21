@@ -9,7 +9,13 @@ import { fetchGroup, fetchGroupMembers } from "../api/groups"
 import { ApiError, apiErrorMessage } from "../api/client"
 import type { CurrencyType, GroupMemberType } from "../interfaces/interface"
 
-const today = new Date().toISOString().split("T")[0]
+function getLocalCalendarDate() {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0")
+    const day = String(now.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+}
 
 function AddExpensePage() {
     const { groupId } = useParams()
@@ -22,7 +28,7 @@ function AddExpensePage() {
     const [expenseName, setExpenseName] = useState("")
     const [expenseTotal, setExpenseTotal] = useState("")
     const [expenseCurrency, setExpenseCurrency] = useState<CurrencyType>()
-    const [expenseDate, setExpenseDate] = useState(today)
+    const [expenseDate, setExpenseDate] = useState(getLocalCalendarDate)
     const [amountPaid, setAmountPaid] = useState<Record<string, string>>({})
     const [amountSplit, setAmountSplit] = useState<Record<string, string>>({})
     const [errorMessage, setErrorMessage] = useState("")

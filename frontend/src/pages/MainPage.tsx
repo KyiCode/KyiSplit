@@ -12,6 +12,10 @@ function MainPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [loadAttempt, setLoadAttempt] = useState(0)
+    const [createdGroup, setCreatedGroup] = useState<{
+        groupId: string
+        groupName: string
+    } | null>(null)
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -45,16 +49,46 @@ function MainPage() {
         defaultCurrency: string
     ) {
         setError("")
+        let created: Awaited<ReturnType<typeof createGroup>>
         try {
-            await createGroup(groupName, groupUserName, defaultCurrency)
-            await refreshGroups()
-            return true
+            created = await createGroup(
+                groupName,
+                groupUserName,
+                defaultCurrency
+            )
         } catch (error) {
             setError(apiErrorMessage(
                 error,
                 "Unable to create that group right now."
             ))
             return false
+        }
+
+        try {
+            await refreshGroups()
+            navigate(`/group/${created.groupId}`)
+        } catch {
+            setCreatedGroup({
+                groupId: created.groupId,
+                groupName
+            })
+            setError(
+                `${groupName} was created, but your group list could not be refreshed.`
+            )
+        }
+        return true
+    }
+
+    async function refreshCreatedGroup() {
+        if (!createdGroup) return
+        setError("")
+        try {
+            await refreshGroups()
+            navigate(`/group/${createdGroup.groupId}`)
+        } catch {
+            setError(
+                `${createdGroup.groupName} was created, but your group list still could not be refreshed.`
+            )
         }
     }
 
@@ -81,13 +115,26 @@ function MainPage() {
             {error && (
                 <div className="notice error" role="alert">
                     <span>{error}</span>
-                    <button onClick={() => {
-                        setLoading(true)
-                        setError("")
-                        setLoadAttempt(value => value + 1)
-                    }}>
-                        Try again
-                    </button>
+                    {createdGroup ? (
+                        <>
+                            <button onClick={() => void refreshCreatedGroup()}>
+                                Refresh groups
+                            </button>
+                            <button onClick={() => navigate(
+                                `/group/${createdGroup.groupId}`
+                            )}>
+                                Open group
+                            </button>
+                        </>
+                    ) : (
+                        <button onClick={() => {
+                            setLoading(true)
+                            setError("")
+                            setLoadAttempt(value => value + 1)
+                        }}>
+                            Try again
+                        </button>
+                    )}
                 </div>
             )}
 

@@ -1,15 +1,20 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import type { Server } from 'node:http'
 import { Client } from 'pg'
-import { prepareRunPostgres, stopRunPostgres } from './database'
+import {
+    E2EDatabaseStartupError,
+    prepareRunPostgres,
+    stopRunPostgres
+} from './database'
 import { startFxServer } from './fxServer'
 
 async function main() {
     const databaseUrl = await prepareRunPostgres(process.env)
     const fxPort = Number(process.env.E2E_FX_PORT)
     if (!Number.isInteger(fxPort) || fxPort < 1 || fxPort > 65535) {
-        throw new Error('E2E_FX_PORT must be an explicit valid port')
+        throw new Error('E2E server configuration is invalid')
     }
     const fxServer = await startFxServer(fxPort, {
         expireInvite: async token => {
@@ -54,8 +59,15 @@ async function main() {
     }
     process.once('SIGINT', () => void stop())
     process.once('SIGTERM', () => void stop())
-    backend.once('error', () => void stop(1))
-    backend.once('exit', code => void stop(code ?? 1))
+    backend.once('error', () => {
+        recordDiagnostic('packaged-server-startup', 'service-start-failed')
+        void stop(1)
+    })
+    backend.once('exit', code => {
+        if (stopping) return
+        recordDiagnostic('packaged-server-startup', 'service-start-failed')
+        void stop(code ?? 1)
+    })
 }
 
 function closeServer(server: Server) {
@@ -65,7 +77,28 @@ function closeServer(server: Server) {
 }
 
 void main().catch(error => {
-    const message = error instanceof Error ? error.message : 'Unknown E2E startup failure'
-    process.stderr.write(`${message}\n`)
+    if (error instanceof E2EDatabaseStartupError) {
+        recordDiagnostic(error.stage, error.category)
+    } else {
+        recordDiagnostic('packaged-server-startup', 'service-start-failed')
+    }
     process.exitCode = 1
 })
+
+function recordDiagnostic(
+    stage: string,
+    category: string
+) {
+    const file = process.env.E2E_DIAGNOSTIC_FILE
+    if (!file) return
+    try {
+        fs.mkdirSync(path.dirname(file), { recursive: true })
+        fs.writeFileSync(
+            file,
+            JSON.stringify({ stage, category }),
+            'utf8'
+        )
+    } catch {
+        // The parent runner reports a generic safe startup category.
+    }
+}

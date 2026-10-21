@@ -39,4 +39,21 @@ describe("expense routes", () => {
             route.method === "PUT" || route.method === "PATCH"
         ))).toBe(false)
     })
+
+    it("exposes a group-scoped expense detail route", () => {
+        const routes = (router.stack as RouteLayer[])
+            .filter(layer => layer.route)
+            .flatMap(layer => Object.entries(layer.route!.methods)
+                .filter(([, enabled]) => enabled)
+                .map(([method]) => ({
+                    method: method.toUpperCase(),
+                    path: layer.route!.path
+                }))
+            )
+
+        expect(routes).toContainEqual({
+            method: "GET",
+            path: "/:groupId/:expenseId"
+        })
+    })
 })

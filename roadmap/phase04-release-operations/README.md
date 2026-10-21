@@ -42,7 +42,7 @@ These tasks complete the private-release scope.
 ### Repository Review Follow-up
 
 The 2026-10-11 review identified additional work before deployment. Execute
-Tasks 12–21 in the order below, then resume existing Tasks 07–11. Task numbers
+Tasks 12–21 in the order below, then Tasks 22–32, then resume Tasks 07–11. Task numbers
 retain the existing task links and completed history.
 
 This follow-up contains only repository changes and local verification that
@@ -72,6 +72,42 @@ For behavioral changes, use TDD and run the relevant repository checks listed
 in each task. Offline schema and browser-diagnostic checks use controlled
 fixtures. Their completion does not constitute live database or E2E evidence.
 
+### 2026-10-14 Local Review Follow-up
+
+The local review passed backend and frontend automated checks and a synthetic
+API journey, but live schema verification rejected a database created directly
+from the reference, and the isolated browser suite failed without an actionable
+startup summary. Manual visual/mobile verification was unavailable.
+
+Complete the ordered tasks below before resuming Task 07. This adds 26 points.
+The existing local/prod profile changes are uncommitted work to validate in
+Task 22, not completed roadmap work. Tasks 19 and 20 retain their recorded
+offline completion; Tasks 23 and 24 address the newly observed live gaps.
+
+Keep the private-friends audience, existing Supabase production database,
+manual schema administration, member permissions, and delete-and-recreate
+expense correction policy. Use explicitly disposable local PostgreSQL fixtures
+for tests, separate from the persistent local demo and hosted databases.
+Selecting a database profile must not disable production runtime safeguards.
+
+| Task | Area | Points | Outcome |
+| --- | --- | ---: | --- |
+| [22 — Validate Local and Production Database Profiles](task22-validate-database-profiles.md) (done) | Backend | 2 | Make local PostgreSQL and hosted Supabase selection explicit, reproducible, and isolated. |
+| [23 — Fix Live PostgreSQL Schema Verification](task23-fix-live-schema-verification.md) (done) | Backend | 5 | Make the schema gate accept the reference schema on real PostgreSQL while still rejecting drift. |
+| [24 — Restore Safe Browser Test Diagnostics](task24-restore-safe-e2e-diagnostics.md) (done) | Frontend | 3 | Explain browser-suite startup and test failures while preserving the artifact privacy policy. |
+| [25 — Recover After Group Creation Refresh Failure](task25-recover-group-creation-refresh.md) (done) | Frontend | 2 | Keep confirmed group creation successful when its subsequent list refresh fails. |
+| [26 — Use the Local Calendar Date for New Expenses](task26-use-local-calendar-date.md) (done) | Frontend | 1 | Default an expense to the user's current local date when opening a new expense form. |
+| [27 — Expose the Saved Expense Breakdown](task27-expose-expense-breakdown-api.md) (done) | Backend | 3 | Let authorized members retrieve the stored payer, split, and FX facts behind an expense. |
+| [28 — Show Payers, Shares, and Saved FX](task28-show-expense-breakdown.md) (done) | Frontend | 3 | Make an expense understandable and its group-currency balance traceable. |
+| [29 — Clarify Balance Refresh and Safer Delete Focus](task29-clarify-balance-refresh-and-delete-focus.md) (done) | Frontend | 2 | Make retained balances visibly stale during refresh and make keyboard deletion deliberate. |
+| [30 — Order Expense Activity Deterministically](task30-order-expense-activity.md) (done) | Backend | 1 | Make Recent expenses consistently show newest activity first. |
+| [31 — Return a Validation Error for Malformed JSON](task31-reject-malformed-json.md) (done) | Backend | 1 | Treat invalid request JSON as a client error rather than an internal server failure. |
+| [32 — Rerun the Private Release Browser Review](task32-rerun-private-release-browser-review.md) | Integration | 3 | Close the review's browser, visual, and accessibility evidence gaps before resuming release operations. |
+
+The order prioritizes trustworthy verification, confirmed-save recovery,
+expense transparency, then the browser review. Each implementation change and
+commit remains scoped to one task with failing behavioral tests first.
+
 ### Existing Release Tasks
 
 | Task | Area | Points | Outcome |
@@ -88,10 +124,16 @@ fixtures. Their completion does not constitute live database or E2E evidence.
 | [10 — Complete release and onboarding documentation](task10-complete-release-runbook.md) | Documentation | 3 | Setup, schema administration, deployment, recovery, and user onboarding are documented |
 | [11 — Verify, rollback, and promote the release](task11-verify-and-promote-release.md) | Integration | 5 | The production-like artifact passes verification, rollback, and promotion |
 
-Total: 74 points, including the 30-point repository review follow-up.
+Total: 100 points, including the 30-point repository review follow-up and the
+26-point local review follow-up.
 
 
 ## Exit Criteria
+
+- Tasks 22–32 pass their acceptance criteria. A real reference-schema database
+  passes compatibility checks, representative drift still fails, browser
+  failures remain safely diagnosable, and the completed browser/manual review
+  is recorded without claiming unavailable checks passed.
 
 - Repository review follow-up Tasks 12–21 pass their acceptance criteria and
   local verification. Existing release gates below still apply.

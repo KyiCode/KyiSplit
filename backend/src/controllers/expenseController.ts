@@ -1,7 +1,10 @@
 import { Request, Response } from 'express'
 
 import database from '../db'
-import type { DeleteExpenseData } from '../contracts/api'
+import type {
+    DeleteExpenseData,
+    ExpenseDetailData
+} from '../contracts/api'
 import { isUserAuthorised } from '../utils/validators'
 import { getExpenses } from '../utils/queries'
 import { getGroupDetails } from '../utils/queries'
@@ -14,6 +17,7 @@ import {
     serializeTimestamp
 } from '../contracts/serialization'
 import {
+    DataIntegrityError,
     FxUnavailableError,
     getFxQuote
 } from '../utils/currencyServices'
@@ -212,6 +216,162 @@ export const getExpenseList = async (req: Request, res: Response) => {
             500,
             "INTERNAL_ERROR",
             "Server error getting expenses"
+        )
+    }
+}
+
+export const getExpenseDetail = async (req: Request, res: Response) => {
+    const groupId = req.params.groupId as string
+    const expenseId = req.params.expenseId as string
+    const userId = req.user.userId
+
+    if (!isUuid(groupId) || !isUuid(expenseId)) {
+        return sendFailure(
+            res,
+            400,
+            "VALIDATION_ERROR",
+            "Invalid expense"
+        )
+    }
+
+    try {
+        if (!(await isUserAuthorised(userId, groupId))) {
+            return sendFailure(res, 403, "FORBIDDEN", "Forbidden")
+        }
+
+        const result = await database.query<{
+            id: string
+            group_id: string
+            name: string
+            total: string
+            date: Date | string
+            created_at: Date | string
+            currency: string
+            source_currency: string | null
+            target_currency: string | null
+            rate: string | null
+            provider: string | null
+            provider_effective_at: Date | string | null
+            captured_at: Date | string | null
+        }>(
+            `SELECT
+                expense.id,
+                expense.group_id,
+                expense.name,
+                expense.total::text,
+                expense.date,
+                expense.created_at,
+                expense.currency,
+                snapshot.source_currency,
+                snapshot.target_currency,
+                snapshot.rate::text,
+                snapshot.provider,
+                snapshot.provider_effective_at,
+                snapshot.captured_at
+             FROM expenses AS expense
+             LEFT JOIN expense_fx_snapshots AS snapshot
+                ON snapshot.expense_id = expense.id
+               AND snapshot.group_id = expense.group_id
+             WHERE expense.id = $2 AND expense.group_id = $1`,
+            [groupId, expenseId]
+        )
+        const expense = result.rows[0]
+        if (!expense) {
+            return sendFailure(
+                res,
+                404,
+                "NOT_FOUND",
+                "Expense not found"
+            )
+        }
+
+        if (
+            !expense.source_currency ||
+            !expense.target_currency ||
+            !expense.rate ||
+            !expense.provider ||
+            !expense.captured_at
+        ) {
+            throw new DataIntegrityError("Stored expense FX is incomplete")
+        }
+
+        const [payments, splits] = await Promise.all([
+            database.query<{ user_id: string, amount: string }>(
+                `SELECT user_id, amount::text
+                 FROM payments
+                 WHERE group_id = $1 AND expense_id = $2
+                 ORDER BY user_id`,
+                [groupId, expenseId]
+            ),
+            database.query<{ user_id: string, amount: string }>(
+                `SELECT user_id, amount::text
+                 FROM splits
+                 WHERE group_id = $1 AND expense_id = $2
+                 ORDER BY user_id`,
+                [groupId, expenseId]
+            )
+        ])
+
+        if (payments.rows.length === 0 || splits.rows.length === 0) {
+            throw new DataIntegrityError(
+                "Stored expense allocations are incomplete"
+            )
+        }
+
+        const data: ExpenseDetailData = {
+            expense: {
+                expenseId: expense.id,
+                groupId: expense.group_id,
+                expenseName: expense.name,
+                expenseTotal: serializeMoney(expense.total),
+                date: serializeDate(expense.date),
+                createdAt: serializeTimestamp(expense.created_at),
+                currency: expense.currency,
+                paidBy: payments.rows.map(payment => ({
+                    userId: payment.user_id,
+                    amount: serializeMoney(payment.amount)
+                })),
+                splits: splits.rows.map(split => ({
+                    userId: split.user_id,
+                    amount: serializeMoney(split.amount)
+                })),
+                fxSnapshot: {
+                    sourceCurrency: expense.source_currency,
+                    targetCurrency: expense.target_currency,
+                    rate: expense.rate,
+                    provider: expense.provider,
+                    effectiveAt: expense.provider_effective_at === null
+                        ? null
+                        : serializeTimestamp(expense.provider_effective_at),
+                    capturedAt: serializeTimestamp(expense.captured_at)
+                }
+            }
+        }
+        return sendSuccess(res, 200, data)
+    } catch (error) {
+        if (error instanceof DataIntegrityError) {
+            logger.error("expense_detail_data_integrity_failed", {
+                operation: "get_expense_detail",
+                groupId,
+                expenseId
+            }, error)
+            return sendFailure(
+                res,
+                500,
+                "DATA_INTEGRITY_ERROR",
+                "Stored expense details are incomplete"
+            )
+        }
+        logger.error("expense_detail_failed", {
+            operation: "get_expense_detail",
+            groupId,
+            expenseId
+        }, error)
+        return sendFailure(
+            res,
+            500,
+            "INTERNAL_ERROR",
+            "Server error getting expense details"
         )
     }
 }

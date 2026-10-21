@@ -27,7 +27,7 @@ export async function getExpenseTotal(expenseId: string) {
 
 export async function getExpenses(groupId: string) {
     const expenseListResult = await database.query(
-        'SELECT * FROM expenses WHERE group_id = $1',
+        'SELECT * FROM expenses WHERE group_id = $1 ORDER BY date DESC, created_at DESC, id DESC',
         [groupId]
     )
     return expenseListResult.rows

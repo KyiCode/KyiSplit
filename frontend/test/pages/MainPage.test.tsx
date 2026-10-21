@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MainPage from '../../src/pages/MainPage'
 import PageShell from '../../src/components/PageShell'
@@ -34,9 +34,9 @@ test('global 401 handling navigates an authenticated page to sign-in', async () 
   renderAt(<UnauthorizedTrigger />, '/group/group-1')
 
   await user.click(screen.getByRole('button', { name: 'Load groups' }))
-  expect(screen.getByLabelText('Current location')).toHaveTextContent(
-    '/auth',
-  )
+  await waitFor(() => {
+    expect(screen.getByLabelText('Current location')).toHaveTextContent('/auth')
+  })
 })
 
 test('submits the chosen group currency and preserves values on rejection', async () => {
@@ -150,8 +150,9 @@ test('logs out once and clears invitation continuation', async () => {
   expect(fetchMock).toHaveBeenCalledTimes(2)
 
   resolveLogout(successResponse({}))
-  expect(await screen.findByLabelText('Current location'))
-    .toHaveTextContent('/auth')
+  await waitFor(() => {
+    expect(screen.getByLabelText('Current location')).toHaveTextContent('/auth')
+  })
   expect(localStorage.getItem('pendingInvite')).toBeNull()
 })
 
@@ -200,4 +201,58 @@ test('prevents duplicate group creation while the request is pending', async () 
   }, 201))
   expect(await screen.findByRole('button', { name: /Start a new group/ }))
     .toBeInTheDocument()
+})
+
+test('keeps a saved group recoverable when the group list refresh fails', async () => {
+  const user = userEvent.setup()
+  const fetchMock = installFetchQueue(
+    successResponse(emptyGroups),
+    jsonResponse([{ iso_code: 'SGD', name: 'Singapore dollar' }]),
+    successResponse({
+      groupId: 'saved-group',
+      message: 'Group created.',
+      defaultCurrency: 'SGD',
+    }, 201),
+    failureResponse('Group list unavailable.', 503),
+    successResponse({
+      userId: 'user-1',
+      groups: [{
+        groupId: 'saved-group',
+        groupName: 'Penang weekend',
+        defaultCurrency: 'SGD',
+        groupMembers: [{ userId: 'user-1', userGroupName: 'Kai' }],
+      }],
+    }),
+  )
+  renderAt(<MainPage />)
+
+  await user.click(await screen.findByRole('button', {
+    name: /Start a new group/,
+  }))
+  await user.type(
+    screen.getByRole('textbox', { name: 'Group name' }),
+    'Penang weekend',
+  )
+  await user.type(
+    screen.getByRole('textbox', { name: 'Your name in this group' }),
+    'Kai',
+  )
+  await user.click(screen.getByRole('button', { name: 'Choose group currency' }))
+  await user.click(await screen.findByRole('button', {
+    name: /SGD.*Singapore dollar/,
+  }))
+  await user.click(screen.getByRole('button', { name: 'Create group' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Penang weekend was created, but your group list could not be refreshed.',
+  )
+  await user.click(screen.getByRole('button', { name: 'Refresh groups' }))
+
+  await waitFor(() => {
+    expect(screen.getByLabelText('Current location'))
+      .toHaveTextContent('/group/saved-group')
+  })
+  expect(fetchMock.mock.calls.filter(([input, init]) =>
+    String(input).includes('/api/groups/addgroup') && init?.method === 'POST',
+  )).toHaveLength(1)
 })

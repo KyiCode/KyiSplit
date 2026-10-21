@@ -64,6 +64,10 @@ describe("API route inventory", () => {
             {
                 method: "DELETE",
                 path: "/api/expenses/:groupId/:expenseId"
+            },
+            {
+                method: "GET",
+                path: "/api/expenses/:groupId/:expenseId"
             }
         ]))
     })

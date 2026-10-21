@@ -2,6 +2,8 @@ import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
     assertSchemaCompatibility,
+    E2EDatabaseStartupError,
+    prepareRunPostgres,
     readPostgresConfig
 } from '../../e2e/database'
 
@@ -16,6 +18,35 @@ const baseEnvironment = {
 }
 
 describe('E2E PostgreSQL guardrails', () => {
+    it('classifies invalid startup settings without retaining their values', async () => {
+        const environment = {
+            DATABASE_URL: 'postgres://person:password@host/db',
+            E2E_POSTGRES_TEMPLATE_DIR: 'secret-template-path'
+        }
+
+        const error = await prepareRunPostgres(environment).catch(value => value)
+
+        expect(error).toBeInstanceOf(E2EDatabaseStartupError)
+        expect(error).toMatchObject({
+            stage: 'configuration',
+            category: 'invalid-settings',
+            message: 'E2E database startup failed'
+        })
+        expect(error.message).not.toContain('password')
+    })
+
+    it('classifies a missing PostgreSQL executable as a prerequisite failure', async () => {
+        const error = await prepareRunPostgres(baseEnvironment).catch(value => value)
+
+        expect(error).toBeInstanceOf(E2EDatabaseStartupError)
+        expect(error).toMatchObject({
+            stage: 'prerequisite',
+            category: 'missing-postgres-binary',
+            message: 'E2E database startup failed'
+        })
+        expect(error.message).not.toContain(baseEnvironment.E2E_POSTGRES_BIN_DIR)
+    })
+
     it('accepts explicit template, binary, port, and run locations', () => {
         expect(readPostgresConfig(baseEnvironment)).toMatchObject({
             databaseName: 'kyisplit_e2e_template',

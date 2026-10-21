@@ -20,28 +20,22 @@ type ExpenseValidationResult =
     | { ok: false, message: string }
 
 export function parseMoneyToCents(value: unknown): number | null {
-    let amount: number
-
     if (typeof value === "string") {
         const normalized = value.trim()
         if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null
-        amount = Number(normalized)
-    } else if (typeof value === "number") {
-        amount = value
-    } else {
+        const [whole, fraction = ""] = normalized.split(".")
+        if (whole.length > 14) return null
+        const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"))
+        if (cents > BigInt(Number.MAX_SAFE_INTEGER)) return null
+        return Number(cents)
+    }
+
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
         return null
     }
 
-    if (!Number.isFinite(amount) || amount < 0) return null
-
-    const scaled = amount * 100
-    const cents = Math.round(scaled)
-    if (
-        !Number.isSafeInteger(cents) ||
-        Math.abs(scaled - cents) > 1e-8
-    ) {
-        return null
-    }
+    const cents = Math.round(value * 100)
+    if (!Number.isSafeInteger(cents) || cents / 100 !== value) return null
 
     return cents
 }

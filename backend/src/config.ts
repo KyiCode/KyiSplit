@@ -1,3 +1,5 @@
+import { isIP } from "node:net"
+
 export interface AuthConfig {
     bcryptCost: number
     isProduction: boolean
@@ -77,7 +79,33 @@ export function readServerConfig(
 export function readDatabaseConfig(
     environment: Environment = process.env
 ): DatabaseConfig {
-    const connectionString = environment.DATABASE_URL?.trim() || undefined
+    const profile = environment.DB_PROFILE?.trim()
+    if (profile && profile !== "local" && profile !== "prod") {
+        throw new Error("DB_PROFILE must be local or prod")
+    }
+    let connectionString = environment.DATABASE_URL?.trim() || undefined
+    if (profile === "local") {
+        connectionString = environment.LOCAL_DATABASE_URL?.trim()
+        let url: URL
+        try {
+            url = new URL(connectionString || "")
+        } catch {
+            throw new Error("LOCAL_DATABASE_URL must be a loopback PostgreSQL URL")
+        }
+        if (
+            !["postgres:", "postgresql:"].includes(url.protocol) ||
+            !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
+            url.pathname.length <= 1 || url.search || url.hash
+        ) {
+            throw new Error("LOCAL_DATABASE_URL must be a loopback PostgreSQL URL")
+        }
+    } else if (profile === "prod") {
+        connectionString = environment.SUPABASE_DATABASE_URL?.trim() || connectionString
+        if (!connectionString) {
+            throw new Error("SUPABASE_DATABASE_URL or DATABASE_URL must be configured for prod")
+        }
+        validateProductionDatabaseUrl(connectionString)
+    }
     if (environment.NODE_ENV === "production" && !connectionString) {
         throw new Error("DATABASE_URL must be configured")
     }
@@ -98,6 +126,47 @@ export function readDatabaseConfig(
             100,
             30000,
             "DB_CONNECTION_TIMEOUT_MS"
+        )
+    }
+}
+
+function validateProductionDatabaseUrl(connectionString: string) {
+    let url: URL
+    try {
+        url = new URL(connectionString)
+    } catch {
+        throw new Error(
+            "SUPABASE_DATABASE_URL or DATABASE_URL must be a hosted PostgreSQL URL for prod"
+        )
+    }
+    if (
+        !["postgres:", "postgresql:"].includes(url.protocol) ||
+        url.pathname.length <= 1
+    ) {
+        throw new Error(
+            "SUPABASE_DATABASE_URL or DATABASE_URL must be a hosted PostgreSQL URL for prod"
+        )
+    }
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "")
+    const ipv4Parts = hostname.split(".").map(Number)
+    const hostnameWithoutIpv6Brackets = hostname.replace(/^\[|\]$/g, "")
+    const isLoopbackIpv4 = isIP(hostname) === 4 && ipv4Parts[0] === 127
+    const isAmbiguousIpLiteral = (
+        isIP(hostnameWithoutIpv6Brackets) === 0 &&
+        /^(?:(?:0x[0-9a-f]+|[0-9]+)(?:\.(?:0x[0-9a-f]+|[0-9]+))*)$/i.test(hostname)
+    )
+    const localTarget = hostname === "localhost" ||
+        hostname.endsWith(".localhost") ||
+        hostname === "[::1]" ||
+        isLoopbackIpv4 ||
+        url.searchParams.has("host") ||
+        url.searchParams.has("hostaddr")
+    if (localTarget) {
+        throw new Error("Production database URL must not target a local database")
+    }
+    if (isIP(hostnameWithoutIpv6Brackets) || isAmbiguousIpLiteral) {
+        throw new Error(
+            "SUPABASE_DATABASE_URL or DATABASE_URL must use a hosted database hostname for prod"
         )
     }
 }

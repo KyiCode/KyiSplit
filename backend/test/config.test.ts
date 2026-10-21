@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { readAuthConfig, readRuntimeConfig, readServerConfig } from "../src/config"
+import { readAuthConfig, readDatabaseConfig, readRuntimeConfig, readServerConfig } from "../src/config"
 
 describe("auth configuration", () => {
     it("parses valid authentication configuration", () => {
@@ -101,5 +101,117 @@ describe("production runtime configuration", () => {
         expect(() => readRuntimeConfig(validEnvironment, "v24.3.0")).toThrow(
             "Node.js 22"
         )
+    })
+})
+
+describe("database and runtime profile independence", () => {
+    it("uses the prod database with development runtime settings", () => {
+        const config = readRuntimeConfig({
+            NODE_ENV: "development",
+            DB_PROFILE: "prod",
+            JWT_KEY: "test-signing-key",
+            BCRYPT_SALT: "10",
+            FRONTEND_URL: "http://localhost:5173",
+            PORT: "5001",
+            SUPABASE_DATABASE_URL: "postgresql://supabase.example/app"
+        }, "v24.3.0")
+
+        expect(config.isProduction).toBe(false)
+        expect(config.database.connectionString)
+            .toBe("postgresql://supabase.example/app")
+    })
+
+    it("retains production runtime checks with the prod database", () => {
+        expect(() => readRuntimeConfig({
+            NODE_ENV: "production",
+            DB_PROFILE: "prod",
+            JWT_KEY: "test-signing-key",
+            BCRYPT_SALT: "10",
+            FRONTEND_URL: "https://kyisplit.example",
+            PORT: "5001",
+            SUPABASE_DATABASE_URL: "postgresql://supabase.example/app",
+            TRUST_PROXY_HOPS: "1"
+        }, "v24.3.0")).toThrow("Node.js 22")
+    })
+})
+
+describe("database profiles", () => {
+    const localUrl = "postgresql://review@127.0.0.1:55433/kyisplit_local"
+    const hostedUrl = "postgresql://supabase.example/app"
+
+    it("uses only the explicit local URL for local development", () => {
+        expect(readDatabaseConfig({
+            DB_PROFILE: "local",
+            LOCAL_DATABASE_URL: localUrl,
+            DATABASE_URL: hostedUrl
+        }).connectionString).toBe(localUrl)
+    })
+
+    it.each([
+        undefined,
+        "postgresql://remote.example/app",
+        "mysql://localhost/app",
+        "postgresql://localhost",
+        "postgresql://localhost/app?host=remote.example"
+    ])("rejects an unsafe local target: %s", url => {
+        expect(() => readDatabaseConfig({
+            DB_PROFILE: "local",
+            LOCAL_DATABASE_URL: url,
+            DATABASE_URL: hostedUrl
+        })).toThrow("LOCAL_DATABASE_URL")
+    })
+
+    it("uses the Supabase URL in the prod profile", () => {
+        expect(readDatabaseConfig({
+            DB_PROFILE: "prod",
+            SUPABASE_DATABASE_URL: hostedUrl,
+            LOCAL_DATABASE_URL: localUrl
+        }).connectionString).toBe(hostedUrl)
+    })
+
+    it("preserves DATABASE_URL as the prod deployment alias", () => {
+        expect(readDatabaseConfig({
+            DB_PROFILE: "prod",
+            DATABASE_URL: hostedUrl
+        }).connectionString).toBe(hostedUrl)
+    })
+
+    it("never falls back to local for prod", () => {
+        expect(() => readDatabaseConfig({
+            DB_PROFILE: "prod",
+            LOCAL_DATABASE_URL: localUrl
+        })).toThrow("SUPABASE_DATABASE_URL")
+    })
+
+    it("rejects a local DATABASE_URL alias in the prod profile", () => {
+        expect(() => readDatabaseConfig({
+            DB_PROFILE: "prod",
+            DATABASE_URL: localUrl
+        })).toThrow("must not target a local database")
+    })
+
+    it.each([
+        "postgresql://local@localhost/app",
+        "postgresql://local@127.1/app",
+        "postgresql://local@0x7f000001/app",
+        "postgresql://local@[::1]/app",
+        "postgresql://local@[fe80::1]/app",
+        "postgresql://db.example/app?host=127.0.0.1",
+        "mysql://db.example/app",
+        "not-a-database-url"
+    ])("rejects a non-hosted prod database URL: %s", url => {
+        expect(() => readDatabaseConfig({
+            DB_PROFILE: "prod",
+            SUPABASE_DATABASE_URL: url
+        })).toThrow()
+    })
+
+    it("rejects an unknown profile", () => {
+        expect(() => readDatabaseConfig({ DB_PROFILE: "typo" })).toThrow("DB_PROFILE")
+    })
+
+    it("keeps existing explicit database configuration compatible", () => {
+        expect(readDatabaseConfig({ DATABASE_URL: localUrl }).connectionString)
+            .toBe(localUrl)
     })
 })

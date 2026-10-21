@@ -2,8 +2,10 @@ import fs from 'node:fs/promises'
 import http, { type Server } from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import { createApp } from '../src/app'
+import type { NextFunction, Request, Response } from 'express'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createApp, logUnhandledRequestError } from '../src/app'
+import { logger } from '../src/logging/logger'
 
 const servers: Server[] = []
 const directories: string[] = []
@@ -17,9 +19,103 @@ afterEach(async () => {
     await Promise.all(directories.splice(0).map(directory => (
         fs.rm(directory, { force: true, recursive: true })
     )))
+    vi.restoreAllMocks()
 })
 
 describe('production application serving', () => {
+    it('returns a sanitized validation error for malformed JSON', async () => {
+        const errorLog = vi.spyOn(logger, 'error')
+        const warningLog = vi.spyOn(logger, 'warn')
+        const origin = await start(createApp())
+        const rawBody = '{"password":"malformed-secret","token":"unterminated'
+
+        const response = await fetch(`${origin}/api/users/signup`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: rawBody
+        })
+        const responseText = await response.text()
+
+        expect(response.status).toBe(400)
+        expect(JSON.parse(responseText)).toEqual({
+            status: 'fail',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid JSON request body'
+        })
+        expect(responseText).not.toContain('malformed-secret')
+        expect(responseText).not.toContain('SyntaxError')
+        expect(errorLog).not.toHaveBeenCalled()
+        expect(warningLog).toHaveBeenCalledWith(
+            'request_body_rejected',
+            { method: 'POST', operation: 'request_json_parse' }
+        )
+        expect(JSON.stringify(warningLog.mock.calls)).not.toContain('malformed-secret')
+        expect(JSON.stringify(warningLog.mock.calls)).not.toContain('unterminated')
+    })
+
+    it('preserves the oversized JSON body response', async () => {
+        const origin = await start(createApp({ requestBodyLimitBytes: 8 }))
+
+        const response = await fetch(`${origin}/api/users/signup`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{"value":"too large"}'
+        })
+
+        expect(response.status).toBe(413)
+        expect(await response.json()).toEqual({
+            status: 'fail',
+            code: 'VALIDATION_ERROR',
+            message: 'Request body too large'
+        })
+    })
+
+    it('keeps unrelated internal errors on the generic 500 path', () => {
+        const error = new Error('database operation failed')
+        const response = {
+            headersSent: false,
+            status: vi.fn().mockReturnThis(),
+            json: vi.fn()
+        } as unknown as Response
+        const next = vi.fn() as NextFunction
+
+        logUnhandledRequestError(
+            error,
+            { method: 'POST', route: { path: '/example' }, baseUrl: '/api' } as Request,
+            response,
+            next
+        )
+
+        expect(response.status).toHaveBeenCalledWith(500)
+        expect(response.json).toHaveBeenCalledWith({
+            status: 'fail',
+            code: 'INTERNAL_ERROR',
+            message: 'Server error'
+        })
+        expect(next).not.toHaveBeenCalled()
+    })
+
+    it('passes unrelated errors to Express after headers are sent', () => {
+        const error = new Error('downstream failure')
+        const response = {
+            headersSent: true,
+            status: vi.fn(),
+            json: vi.fn()
+        } as unknown as Response
+        const next = vi.fn() as NextFunction
+
+        logUnhandledRequestError(
+            error,
+            { method: 'GET', route: { path: '/example' }, baseUrl: '/api' } as Request,
+            response,
+            next
+        )
+
+        expect(response.status).not.toHaveBeenCalled()
+        expect(response.json).not.toHaveBeenCalled()
+        expect(next).toHaveBeenCalledWith(error)
+    })
+
     it('keeps API routes ahead of static files and browser fallback', async () => {
         const frontendRoot = await frontendBuild()
         const origin = await start(createApp({ frontendRoot }))

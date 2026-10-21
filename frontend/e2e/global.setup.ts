@@ -9,3 +9,8 @@ setup('isolated database and services are ready', async ({ request }) => {
   const response = await request.get('/api/users/verifysession')
   expect(response.status()).toBe(401)
 })
+
+setup('browser engine can launch', async ({ browser }) => {
+  const context = await browser.newContext()
+  await context.close()
+})

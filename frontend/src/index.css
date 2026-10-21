@@ -996,6 +996,12 @@ button:disabled {
   text-align: center;
 }
 
+.balance-refresh-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .members-panel {
   position: sticky;
   top: 24px;
@@ -1365,6 +1371,55 @@ button:disabled {
 .expense-detail-list dd {
   margin: 0;
   font-weight: 750;
+}
+
+.expense-breakdown {
+  display: grid;
+  gap: 18px;
+}
+
+.expense-breakdown h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.expense-breakdown-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.expense-breakdown-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.expense-breakdown-list li span {
+  overflow-wrap: anywhere;
+}
+
+.expense-breakdown-list li strong {
+  text-align: right;
+}
+
+.expense-fx-note {
+  min-width: 0;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-soft);
+  overflow-wrap: anywhere;
+}
+
+.expense-fx-note p {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .dialog-actions {

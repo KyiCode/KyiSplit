@@ -313,6 +313,7 @@ function RepaymentPanel({
                         )}
                         <div className="dialog-actions">
                             <button
+                                  ref={button => button?.focus()}
                                 className="button secondary"
                                 disabled={deleting}
                                 onClick={() => setSelectedRepayment(null)}
@@ -320,7 +321,6 @@ function RepaymentPanel({
                                 Keep repayment
                             </button>
                             <button
-                                autoFocus
                                 className="button danger"
                                 disabled={deleting}
                                 onClick={handleDelete}

@@ -1,8 +1,9 @@
 # Browser Test Artifact Policy
 
-Playwright runs with screenshots, traces, and videos disabled. Its reporter
-prints the test name and retry number for a failure, but suppresses the raw
-browser error, response body, and URL.
+Playwright runs with screenshots, traces, and videos disabled. The safe runner
+discards Playwright and service output, then prints only allowlisted failure
+stages, categories, and retry numbers. It does not retain test titles, raw
+browser errors, response bodies, URLs, or service logs.
 
 Never upload or publish these generated or local files:
 

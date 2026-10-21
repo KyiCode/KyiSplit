@@ -140,6 +140,30 @@ export interface ExpenseListData {
     expenses: ExpenseSummary[]
 }
 
+export interface ExpenseBreakdownEntry {
+    userId: string
+    amount: MoneyString
+}
+
+export interface ExpenseFxSnapshot {
+    sourceCurrency: CurrencyCode
+    targetCurrency: CurrencyCode
+    rate: string
+    provider: string
+    effectiveAt: UtcTimestamp | null
+    capturedAt: UtcTimestamp
+}
+
+export interface ExpenseDetail extends ExpenseSummary {
+    paidBy: ExpenseBreakdownEntry[]
+    splits: ExpenseBreakdownEntry[]
+    fxSnapshot: ExpenseFxSnapshot
+}
+
+export interface ExpenseDetailData {
+    expense: ExpenseDetail
+}
+
 export interface DeleteExpenseData {
     expenseId: string
 }
@@ -213,6 +237,7 @@ export const API_ENDPOINTS = [
     { id: "balance", method: "GET", path: "/api/groups/:groupId/getbalance", state: "active" },
     { id: "createExpense", method: "POST", path: "/api/expenses/addexpense", state: "active" },
     { id: "listExpenses", method: "GET", path: "/api/expenses/:groupId", state: "active" },
+    { id: "expenseDetail", method: "GET", path: "/api/expenses/:groupId/:expenseId", state: "active" },
     { id: "deleteExpense", method: "DELETE", path: "/api/expenses/:groupId/:expenseId", state: "active" },
     { id: "listRepayments", method: "GET", path: "/api/groups/:groupId/repayments", state: "active" },
     { id: "createRepayment", method: "POST", path: "/api/groups/:groupId/repayments", state: "active" },

@@ -3,6 +3,10 @@ import {
   isInvitePath,
   safeRequestFailure,
 } from './artifactSafety'
+import {
+  clearSafeDiagnostic,
+  recordSafeDiagnostic,
+} from './safeDiagnostics.mjs'
 
 export { isInvitePath }
 
@@ -31,8 +35,32 @@ export async function signUp(page: Page, email: string) {
   await page.goto('/signup')
   await page.getByRole('textbox', { name: 'Email' }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+  const signupResponsePromise = page.waitForResponse(response => {
+    try {
+      return new URL(response.url()).pathname === '/api/users/signup'
+    } catch {
+      return false
+    }
+  })
   await page.getByRole('button', { name: 'Create account' }).click()
+  const signupResponse = await signupResponsePromise
+  if (!signupResponse.ok()) {
+    const statusClass = signupResponse.status() >= 500
+      ? 'journey-signup-server-error'
+      : signupResponse.status() === 409
+        ? 'journey-signup-conflict'
+        : signupResponse.status() >= 400
+          ? 'journey-signup-client-error'
+          : 'journey-signup-unexpected-status'
+    recordSafeDiagnostic('test-assertion', 'expectation-failed', statusClass)
+  }
+  recordSafeDiagnostic(
+    'test-assertion',
+    'expectation-failed',
+    'journey-signup-ui-success',
+  )
   await expect(page.getByRole('status')).toContainText('Account created')
+  clearSafeDiagnostic()
 }
 
 export async function logIn(page: Page, email: string) {
@@ -40,11 +68,11 @@ export async function logIn(page: Page, email: string) {
   await page.getByRole('textbox', { name: 'Email' }).fill(email)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  const pathname = await page.evaluate(() => (
+  await expect.poll(() => page.evaluate(() => (
     (globalThis as unknown as { location: { pathname: string } }).location.pathname
-  ))
-  expect(pathname !== '/auth', 'Sign in should leave the authentication page.')
-    .toBe(true)
+  )), {
+    message: 'Sign in should leave the authentication page.',
+  }).not.toBe('/auth')
 }
 
 export async function expectSafePath(
@@ -52,10 +80,9 @@ export async function expectSafePath(
   pattern: RegExp,
   description: string,
 ) {
-  const pathname = await page.evaluate(() => (
+  await expect.poll(() => page.evaluate(() => (
     (globalThis as unknown as { location: { pathname: string } }).location.pathname
-  ))
-  expect(pattern.test(pathname), description).toBe(true)
+  )), { message: description }).toMatch(pattern)
 }
 
 export async function signUpAndLogIn(page: Page, email: string) {

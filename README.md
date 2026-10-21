@@ -85,6 +85,34 @@ npm.cmd --prefix frontend run dev
 The frontend is available at `http://localhost:5173`, and the backend listens on
 `http://localhost:5001`.
 
+## Database Profiles
+
+Use PostgreSQL for both profiles; the app uses PostgreSQL-specific queries and constraints.
+
+- `npm.cmd --prefix backend run dev:local` loads `backend/.env` and ignored `backend/.env.local`, then selects `DB_PROFILE=local`. Set `LOCAL_DATABASE_URL` to a loopback PostgreSQL database. This profile never uses the hosted `DATABASE_URL`.
+- `npm.cmd --prefix backend run dev:prod` selects the hosted database while using development runtime settings by default. An explicit shell `NODE_ENV` still overrides the profile file.
+- After building the backend, `npm.cmd --prefix backend run start:local` or `start:prod` runs the compiled server with the selected profile.
+
+Copy `backend/.env.local.example` or `backend/.env.prod.example` to the corresponding ignored file and replace its placeholders. Profile files override the base file; variables injected by the shell/runtime take precedence. The prod profile uses `SUPABASE_DATABASE_URL`, with a hosted PostgreSQL `DATABASE_URL` as a deployment-compatible alias. It rejects loopback hosts and connection-string host overrides and never falls back to `LOCAL_DATABASE_URL`. Commands run from the backend directory through npm's prefix handling.
+
+`DB_PROFILE` chooses the database independently of `NODE_ENV`, which controls production runtime validation, HTTPS origin requirements, and secure cookies. Existing `dev`/`start` commands and isolated E2E tests retain their explicit `DATABASE_URL` behavior when no profile is selected. Production artifacts can select a profile by injecting `DB_PROFILE=prod`; do not package local environment files.
+
+Database provisioning remains manual. Install PostgreSQL command-line tools and run these PowerShell commands from the repository root for a **new local review database only**. If the PostgreSQL tools are not on `PATH`, first point it at your PostgreSQL `bin` directory:
+
+```powershell
+$env:Path = "C:\Program Files\PostgreSQL\17\bin;$env:Path"
+```
+
+```powershell
+New-Item -ItemType Directory -Force .e2e | Out-Null
+initdb -D .e2e/local-postgres -U kyisplit_local --auth-local=trust --auth-host=trust --encoding=UTF8
+pg_ctl -D .e2e/local-postgres -l .e2e/local-postgres/server.log -o "-p 55433 -h 127.0.0.1" -w start
+createdb -h 127.0.0.1 -p 55433 -U kyisplit_local kyisplit_local
+psql -h 127.0.0.1 -p 55433 -U kyisplit_local -d kyisplit_local -v ON_ERROR_STOP=1 --single-transaction -f roadmap/schema-reference.sql
+```
+
+Copy `backend/.env.local.example` to the ignored `backend/.env.local`, then use `npm.cmd --prefix backend run dev:local`. Create any demo accounts and expenses through the app. Stop this review database with `pg_ctl -D .e2e/local-postgres -m fast -w stop`. The local cluster listens on loopback only and uses trust authentication for this isolated development instance; do not reuse this setup for a network-accessible database. Never apply the target-state schema file to a populated database as an incremental migration. Run the read-only schema check against an explicitly selected disposable database. Local data and PostgreSQL clusters belong under ignored `.e2e/`.
+
 ## Build the Production Artifact
 
 Set an explicit release identifier, then run the locked artifact build:

@@ -320,8 +320,7 @@ export async function assertSchemaCompatibility(
 }
 
 async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
-    const [columnsResult, constraintsResult, indexesResult, triggersResult, functionsResult] = await Promise.all([
-        client.query<{
+    const columnsResult = await client.query<{
             table_name: string
             column_name: string
             column_type: string
@@ -338,11 +337,11 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
               AND rel.relkind IN ('r', 'p')
               AND attribute.attnum > 0
               AND NOT attribute.attisdropped
-        `),
-        client.query<{
+        `)
+    const constraintsResult = await client.query<{
             object_name: string
-            object_kind: string
-            columns: string[]
+            object_kind: SchemaConstraintKind
+            columns: string[] | null
             referenced_schema: string | null
             referenced_table: string | null
             referenced_columns: string[] | null
@@ -358,24 +357,24 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
                        WHEN con.contype = 'f' THEN 'foreign'
                        WHEN con.contype = 'c' THEN 'check'
                    END AS object_kind,
-                   ARRAY(
+                   to_json(ARRAY(
                        SELECT attribute.attname
                        FROM unnest(con.conkey) WITH ORDINALITY AS att_key(attnum, ordinal_position)
                        JOIN pg_attribute AS attribute
                          ON attribute.attrelid = con.conrelid
                         AND attribute.attnum = att_key.attnum
                        ORDER BY att_key.ordinal_position
-                   ) AS columns,
+                   )) AS columns,
                    referenced_ns.nspname AS referenced_schema,
                    referenced_rel.relname AS referenced_table,
-                   ARRAY(
+                   to_json(ARRAY(
                        SELECT attribute.attname
                        FROM unnest(con.confkey) WITH ORDINALITY AS att_key(attnum, ordinal_position)
                        JOIN pg_attribute AS attribute
                          ON attribute.attrelid = con.confrelid
                         AND attribute.attnum = att_key.attnum
                        ORDER BY att_key.ordinal_position
-                   ) AS referenced_columns,
+                   )) AS referenced_columns,
                    CASE con.confdeltype
                        WHEN 'a' THEN 'NO ACTION'
                        WHEN 'r' THEN 'RESTRICT'
@@ -395,8 +394,9 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
             LEFT JOIN pg_namespace AS referenced_ns
               ON referenced_ns.oid = referenced_rel.relnamespace
             WHERE ns.nspname = 'public'
-        `),
-        client.query<{
+              AND con.contype IN ('p', 'u', 'f', 'c')
+        `)
+    const indexesResult = await client.query<{
             table_name: string
             is_unique: boolean
             is_valid: boolean
@@ -416,8 +416,8 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
                   FROM pg_constraint AS con
                   WHERE con.conindid = idx.indexrelid
               )
-        `),
-        client.query<{
+        `)
+    const triggersResult = await client.query<{
             table_name: string
             enabled_state: string
             is_before: boolean
@@ -452,8 +452,8 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
             JOIN pg_namespace AS proc_ns ON proc_ns.oid = proc.pronamespace
             WHERE ns.nspname = 'public'
               AND NOT trg.tgisinternal
-        `),
-        client.query<{
+        `)
+    const functionsResult = await client.query<{
             schema_name: string
             name: string
             language: string
@@ -469,7 +469,6 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
             WHERE ns.nspname = 'public'
               AND proc.prokind = 'f'
         `)
-    ])
 
     return {
         columns: columnsResult.rows.map(column => ({
@@ -479,7 +478,7 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
             nullable: !column.is_not_null
         })),
         constraints: constraintsResult.rows.map(constraint => {
-            const kind = constraint.object_kind as SchemaConstraintKind
+            const kind = constraint.object_kind
             return {
                 objectName: constraint.object_name,
                 kind,
@@ -651,12 +650,34 @@ function normalizeType(value: string) {
 
 function normalizeCheckExpression(expression: string) {
     const tokens = removeTypeCasts(tokenizeSql(expression))
-    const ast = parseSqlExpression(tokens)
+    const ast = canonicalizeBooleanExpression(parseSqlExpression(tokens))
     return JSON.stringify(ast)
 }
 
 function normalizeIndexExpression(expression: string) {
-    return removePublicQualification(tokenizeSql(expression)).join(" ").toLowerCase()
+    return splitTopLevel(expression).map(term => {
+        const tokens = removeTypeCasts(
+            removePublicQualification(tokenizeSql(term))
+        )
+        const ordering: string[] = []
+        if (
+            tokens[tokens.length - 1] === "first" ||
+            tokens[tokens.length - 1] === "last"
+        ) {
+            ordering.unshift(tokens.pop()!)
+            if (tokens[tokens.length - 1] === "nulls") ordering.unshift(tokens.pop()!)
+        }
+        if (
+            tokens[tokens.length - 1] === "asc" ||
+            tokens[tokens.length - 1] === "desc"
+        ) {
+            ordering.unshift(tokens.pop()!)
+        }
+        return JSON.stringify([
+            canonicalizeBooleanExpression(parseSqlExpression(tokens)),
+            ordering
+        ])
+    }).join(",")
 }
 
 function normalizeFunctionBody(body: string) {
@@ -744,13 +765,24 @@ function removePublicQualification(tokens: string[]) {
 function removeTypeCasts(tokens: string[]) {
     const result: string[] = []
     const castTypes = new Set([
-        "bigint", "boolean", "character", "date", "double", "integer",
-        "numeric", "precision", "real", "text", "timestamp", "varying",
-        "with", "time", "zone", "uuid"
+        "bigint", "boolean", "character", "date", "decimal", "double",
+        "integer", "numeric", "precision", "real", "smallint", "text",
+        "timestamp", "varying", "with", "time", "zone", "uuid"
     ])
     for (let index = 0; index < tokens.length; index += 1) {
         if (tokens[index] !== "::") {
-            result.push(tokens[index])
+            const numericString = tokens[index].match(
+                /^'([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)'$/i
+            )
+            if (
+                numericString &&
+                tokens[index + 1] === "::" &&
+                numericCastTypes.has(castTypeName(tokens, index + 2))
+            ) {
+                result.push(numericString[1])
+            } else {
+                result.push(tokens[index])
+            }
             continue
         }
         index += 1
@@ -767,6 +799,40 @@ function removeTypeCasts(tokens: string[]) {
         index -= 1
     }
     return result
+}
+
+const numericCastTypes = new Set([
+    "bigint", "decimal", "double", "integer", "numeric", "real", "smallint"
+])
+
+function castTypeName(tokens: string[], start: number) {
+    let index = start
+    if (tokens[index] === "pg_catalog" || tokens[index] === "public") index += 2
+    return tokens[index] || ""
+}
+
+function canonicalizeBooleanExpression(expression: unknown): unknown {
+    if (!Array.isArray(expression)) return expression
+    const operator = expression[0]
+    if (
+        (operator === "and" || operator === "or") &&
+        expression.length === 3
+    ) {
+        const flatten = (value: unknown): unknown[] => {
+            if (
+                Array.isArray(value) &&
+                value[0] === operator &&
+                value.length === 3
+            ) {
+                return [...flatten(value[1]), ...flatten(value[2])]
+            }
+            return [canonicalizeBooleanExpression(value)]
+        }
+        const terms = [...flatten(expression[1]), ...flatten(expression[2])]
+        terms.sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
+        return [operator, ...terms]
+    }
+    return expression.map(canonicalizeBooleanExpression)
 }
 
 function parseSqlExpression(tokens: string[]): unknown {
@@ -825,14 +891,22 @@ function parseSqlExpression(tokens: string[]): unknown {
                 ]
                 continue
             }
-            if (operator === "is" && tokens[position] === "not") position += 1
+            const isNot = operator === "is" && tokens[position] === "not"
+            if (isNot) position += 1
             const right = parseBinary(operatorPrecedence + 1)
-            left = [operator === "!=" ? "<>" : operator, left, right]
+            left = [
+                operator === "!=" ? "<>" : isNot ? "is not" : operator,
+                left,
+                right
+            ]
         }
         return left
     }
 
-    return parseBinary(0)
+    const expression = parseBinary(0)
+    return position === tokens.length
+        ? expression
+        : ["unparsed", expression, ...tokens.slice(position)]
 }
 
 function extractCheckExpression(definition: string) {

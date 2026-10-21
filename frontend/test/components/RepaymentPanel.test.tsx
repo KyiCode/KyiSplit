@@ -190,6 +190,44 @@ test('requires confirmation and refreshes after deleting a repayment', async () 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
+test('delete confirmation starts on Keep and contains keyboard focus', async () => {
+  const user = userEvent.setup()
+  const fetchMock = installFetchQueue(
+    successResponse({ repayments: [repayment] }),
+  )
+  renderPanel()
+
+  const trigger = await screen.findByRole('button', {
+    name: 'Delete repayment from Sam to Kai',
+  })
+  await user.click(trigger)
+  let dialog = screen.getByRole('dialog', { name: 'Delete repayment?' })
+  const keepButton = within(dialog).getByRole('button', {
+    name: 'Keep repayment',
+  })
+  expect(keepButton).toHaveFocus()
+  await user.keyboard('{Enter}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+
+  await user.click(trigger)
+  dialog = screen.getByRole('dialog', { name: 'Delete repayment?' })
+  expect(within(dialog).getByRole('button', {
+    name: 'Keep repayment',
+  })).toHaveFocus()
+  await user.tab()
+  expect(within(dialog).getByRole('button', {
+    name: 'Delete repayment',
+  })).toHaveFocus()
+  await user.tab()
+  expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+
 test.each([
   [
     failureResponse('Forbidden', 403, 'FORBIDDEN'),

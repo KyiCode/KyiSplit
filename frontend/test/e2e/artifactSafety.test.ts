@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   isInvitePath,
+  parseSafeFailureMarker,
+  safeFailureMarker,
   safeFailureSummary,
   safeRequestFailure,
   SAFE_BROWSER_ARTIFACT_OPTIONS,
 } from '../../e2e/artifactSafety'
+import SafeReporter from '../../e2e/safeReporter'
+import { safeDiagnosticSummary } from '../../e2e/safeDiagnostics.mjs'
 
 describe('browser artifact safety', () => {
   it('disables browser state capture by default', () => {
@@ -37,33 +41,153 @@ describe('browser artifact safety', () => {
     }
   })
 
-  it('summarizes failed browser tests without retaining error details', () => {
-    const token = 'b'.repeat(64)
-    const failureDetails = [
-      'page.goto failed',
-      `https://example.test/join/${token}`,
-      'password: correct horse battery staple',
-      'Cookie: session=secret-cookie-value',
-    ].join(' ')
+  it('reports only allowlisted stage, category, and attempt values', () => {
     const diagnostic = safeFailureSummary(
-      'expired invitation is rejected',
+      'test-assertion',
+      'expectation-failed',
       1,
-      failureDetails,
+      'signup-smoke',
     )
 
     expect(diagnostic).toBe(
-      'FAILED: expired invitation is rejected (attempt 2; browser details suppressed).',
+      'E2E failure (case: signup smoke; stage: test assertion; category: expectation failed; attempt 2).',
     )
-    expect(diagnostic).not.toContain(token)
-    expect(diagnostic).not.toContain('correct horse battery staple')
-    expect(diagnostic).not.toContain('secret-cookie-value')
-    const unsafeTitle = safeFailureSummary(
-      `invitation route ${token} https://example.test/join/${token}`,
+
+    expect(safeFailureSummary(
+      'https://example.test/join/secret-token',
+      'password=secret',
       0,
-      failureDetails,
+    )).toBe(
+      'E2E failure (case: runner; stage: runner startup; category: unknown; attempt 1).',
     )
-    expect(unsafeTitle).not.toContain(token)
-    expect(unsafeTitle).not.toContain('https://example.test')
+  })
+
+  it('parses only structured safe reporter markers and diagnostic records', () => {
+    expect(parseSafeFailureMarker(
+      'KYISPLIT_E2E_FAILURE|schema|schema-incompatible|1|schema',
+    )).toBe(
+      'E2E failure (case: schema; stage: schema; category: schema incompatible; attempt 1).',
+    )
+    expect(parseSafeFailureMarker(
+      'KYISPLIT_E2E_FAILURE|schema|schema-incompatible|1|schema postgres://secret',
+    )).toBeUndefined()
+
+    const summary = safeDiagnosticSummary({
+      stage: 'schema',
+      category: 'schema-incompatible',
+      connectionString: 'postgres://person:password@host/db',
+    })
+    expect(summary).toBe(
+      'E2E failure (case: schema; stage: schema; category: schema incompatible; attempt 1).',
+    )
+    expect(summary).not.toContain('password')
+  })
+
+  it('keeps raw global errors out of reporter output', () => {
+    const output: string[] = []
+    const reporter = new SafeReporter(line => output.push(line))
+    const secretError = new Error(
+      'postgres://person:password@host/db token=secret-cookie-value',
+    )
+
+    reporter.onError(secretError as never)
+
+    expect(output).toEqual([
+      safeFailureMarker('runner-startup', 'unknown', 0, 'runner'),
+    ])
+    expect(output.join(' ')).not.toContain('password')
+    expect(output.join(' ')).not.toContain('secret-cookie-value')
+  })
+
+  it('categorizes a setup failure without including its error message', () => {
+    const output: string[] = []
+    const reporter = new SafeReporter(line => output.push(line))
+    const testCase = {
+      parent: { project: () => ({ name: 'setup' }) },
+      titlePath: () => ['setup', 'isolated database and services are ready'],
+    }
+    const testResult = {
+      status: 'failed',
+      retry: 0,
+      steps: [],
+      error: new Error('Cookie: sensitive-session-value'),
+    }
+
+    reporter.onTestEnd(testCase as never, testResult as never)
+
+    expect(output).toEqual([
+      safeFailureMarker('prerequisite', 'setup-check-failed', 0, 'startup-check'),
+    ])
+    expect(output.join(' ')).not.toContain('sensitive-session-value')
+  })
+
+  it('identifies the browser launch stage from the dedicated setup probe', () => {
+    const output: string[] = []
+    const reporter = new SafeReporter(line => output.push(line))
+    const testCase = {
+      parent: { project: () => ({ name: 'setup' }) },
+      titlePath: () => ['setup', 'browser engine can launch'],
+    }
+    const testResult = {
+      status: 'failed',
+      retry: 0,
+      steps: [],
+      error: new Error('raw browser launch details'),
+    }
+
+    reporter.onTestEnd(testCase as never, testResult as never)
+
+    expect(output).toEqual([
+      safeFailureMarker('browser-launch', 'browser-unavailable', 0, 'browser-launch'),
+    ])
+    expect(output.join(' ')).not.toContain('raw browser launch details')
+  })
+
+  it('categorizes assertion errors from structured Playwright steps', () => {
+    const output: string[] = []
+    const reporter = new SafeReporter(line => output.push(line))
+    const testCase = {
+      parent: { project: () => ({ name: 'chromium' }) },
+      titlePath: () => ['chromium', 'signup journey'],
+      location: { file: 'C:/project/frontend/e2e/smoke.spec.ts' },
+    }
+    const testResult = {
+      status: 'failed',
+      retry: 0,
+      steps: [{ category: 'expect', error: new Error('unsafe assertion text') }],
+      error: new Error('unsafe assertion text'),
+    }
+
+    reporter.onTestEnd(testCase as never, testResult as never)
+
+    expect(output).toEqual([
+      safeFailureMarker('test-assertion', 'expectation-failed', 0, 'signup-smoke'),
+    ])
+    expect(output.join(' ')).not.toContain('unsafe assertion text')
+  })
+
+  it('reports only allowlisted critical journey checkpoints', () => {
+    const output: string[] = []
+    const reporter = new SafeReporter(line => output.push(line))
+    const testCase = {
+      parent: { project: () => ({ name: 'chromium' }) },
+      titlePath: () => ['chromium', 'signup through repayment and confirmed deletion'],
+      location: { file: 'C:/project/frontend/e2e/critical-journey.spec.ts' },
+    }
+    const testResult = {
+      status: 'failed',
+      retry: 0,
+      annotations: [{ type: 'safe-e2e-checkpoint', description: 'journey-invite-casey' }],
+      steps: [{ category: 'expect', error: new Error('unsafe assertion text') }],
+      error: new Error('unsafe assertion text'),
+    }
+
+    reporter.onTestEnd(testCase as never, testResult as never)
+
+    expect(output).toEqual([
+      safeFailureMarker('test-assertion', 'expectation-failed', 0, 'journey-invite-casey'),
+    ])
+    expect(output.join(' ')).not.toContain('unsafe assertion text')
   })
 
   it('validates invite paths without exposing the token in assertions', () => {
