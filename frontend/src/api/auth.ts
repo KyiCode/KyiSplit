@@ -3,11 +3,12 @@ import type {
     CredentialsRequest,
     LoginData,
     MessageData,
+    SignupRequest,
     SessionData
 } from "../../../backend/src/contracts/api"
 
-export async function signUp(email: string, password: string) {
-    const body: CredentialsRequest = { email, password }
+export async function signUp(username: string, password: string, token: string) {
+    const body: SignupRequest = { username, password, token }
     return apiRequest<MessageData>("/api/users/signup", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -15,8 +16,8 @@ export async function signUp(email: string, password: string) {
     })
 }
 
-export async function logIn(email: string, password: string) {
-    const body: CredentialsRequest = { email, password }
+export async function logIn(username: string, password: string) {
+    const body: CredentialsRequest = { username, password }
     return apiRequest<LoginData>("/api/users/login", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

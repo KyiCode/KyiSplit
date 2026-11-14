@@ -6,7 +6,9 @@ import { Request, Response } from 'express'
 import { readAuthConfig } from '../config'
 import {
     isSignupPasswordWithinByteLimit,
-    parseCredentials
+    isSignupTokenValid,
+    parseCredentials,
+    parseSignupCredentials
 } from '../utils/authCredentials'
 import generateToken, { clearSessionCookie } from "../utils/tokenGenerator"
 import { hasAccount } from '../utils/validators'
@@ -15,17 +17,17 @@ import { sendFailure, sendSuccess } from '../contracts/http'
 import { logger } from '../logging/logger'
 
 export const signup = async (req: Request, res: Response) => {
-    const credentials = parseCredentials(req.body)
+    const credentials = parseSignupCredentials(req.body)
     if (!credentials) {
         return sendFailure(
             res,
             400,
             "VALIDATION_ERROR",
-            "Invalid email or password"
+            "Enter a valid username, password, and signup token"
         )
     }
 
-    const { email, password } = credentials
+    const { username, password, token } = credentials
     if (!isSignupPasswordWithinByteLimit(password)) {
         return sendFailure(
             res,
@@ -35,13 +37,32 @@ export const signup = async (req: Request, res: Response) => {
         )
     }
 
+    const configuredSignupToken = process.env.SIGNUP_TOKEN?.trim()
+    if (!configuredSignupToken) {
+        logger.error("signup_disabled", { operation: "signup" })
+        return sendFailure(
+            res,
+            503,
+            "INTERNAL_ERROR",
+            "Account creation is temporarily unavailable"
+        )
+    }
+    if (!isSignupTokenValid(token, configuredSignupToken)) {
+        return sendFailure(
+            res,
+            403,
+            "FORBIDDEN",
+            "Invalid signup token"
+        )
+    }
+
     try {
-        if (await hasAccount(email)) {
+        if (await hasAccount(username)) {
             return sendFailure(
                 res,
                 409,
-                "EMAIL_EXISTS",
-                "Email already has an account"
+                "USERNAME_EXISTS",
+                "Username is already taken"
             )
         }
 
@@ -51,8 +72,8 @@ export const signup = async (req: Request, res: Response) => {
             bcrypt.genSaltSync(bcryptCost)
         )
         await database.query(
-            'INSERT INTO users (email, password) VALUES ($1, $2)',
-            [email, hashedPassword]
+            'INSERT INTO users (username, password) VALUES ($1, $2)',
+            [username, hashedPassword]
         )
         return sendSuccess(res, 201, { message: "User created" })
     } catch (error) {
@@ -62,12 +83,12 @@ export const signup = async (req: Request, res: Response) => {
             "code" in error &&
             error.code === "23505"
         ) {
-            logger.warn("signup_email_conflict", { operation: "signup" }, error)
+            logger.warn("signup_username_conflict", { operation: "signup" }, error)
             return sendFailure(
                 res,
                 409,
-                "EMAIL_EXISTS",
-                "Email already has an account"
+                "USERNAME_EXISTS",
+                "Username is already taken"
             )
         }
         logger.error("signup_failed", { operation: "signup" }, error)
@@ -87,13 +108,13 @@ export const login = async (req: Request, res: Response) => {
             res,
             400,
             "VALIDATION_ERROR",
-            "Invalid email or password"
+            "Invalid username or password"
         )
     }
 
     try {
-        const { email, password } = credentials
-        const user = await getUser(email)
+        const { username, password } = credentials
+        const user = await getUser(username)
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return sendFailure(
@@ -108,7 +129,7 @@ export const login = async (req: Request, res: Response) => {
         return sendSuccess(res, 200, {
             user: {
                 userId: user.id,
-                email: user.email
+                username: user.username
             }
         })
     } catch (error) {

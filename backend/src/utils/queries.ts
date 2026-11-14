@@ -42,10 +42,10 @@ export async function getSplits(expenses: string[]) {
     return { payments: paymentResult.rows, splits: splitResult.rows }
 }
 
-export async function getUser(email: string) {
+export async function getUser(username: string) {
     const user = await database.query(
-        "SELECT * FROM users WHERE email = $1",
-        [email]
+        "SELECT * FROM users WHERE username = $1",
+        [username]
     )
     return user.rows[0]
 }

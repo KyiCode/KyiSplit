@@ -39,6 +39,7 @@ directories. Configure these variables before starting the application:
 | --- | --- | --- |
 | Backend | `DATABASE_URL` | PostgreSQL connection string |
 | Backend | `JWT_KEY` | Secret used to sign session tokens |
+| Backend | `SIGNUP_TOKEN` | Private token required to create an account |
 | Backend | `BCRYPT_SALT` | Password-hashing cost |
 | Backend | `FRONTEND_URL` | Browser origin used when creating invitation URLs |
 | Backend | `APP_ORIGIN` | Backward-compatible alias for `FRONTEND_URL` |
@@ -56,6 +57,12 @@ directories. Configure these variables before starting the application:
 | Frontend | `VITE_BASE_URL` | Development-only backend origin; production always uses same-origin API paths |
 
 Do not commit credentials or secret values.
+
+Account creation uses a username, password, and the private `SIGNUP_TOKEN`
+configured on the backend. The token is shared only with intended users and is
+never configured in the frontend build. Usernames are 3–32 characters using
+lowercase letters, numbers, underscores, and hyphens; they are normalized to
+lowercase.
 
 ## Database Schema
 

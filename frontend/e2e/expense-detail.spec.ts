@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   apiCreateGroup,
   apiSignUpAndLogIn,
-  uniqueEmail,
+  uniqueUsername,
 } from './helpers'
 
 async function createExpenseGroup(
@@ -11,7 +11,7 @@ async function createExpenseGroup(
   expenseCurrency: string,
   amount: string,
 ) {
-  await apiSignUpAndLogIn(page, uniqueEmail('expense-detail'))
+  await apiSignUpAndLogIn(page, uniqueUsername('expense-detail'))
   const groupId = await apiCreateGroup(page, 'Expense detail', 'Alex', 'USD')
   const membersResponse = await page.request.get(`/api/groups/${groupId}/members`)
   expect(membersResponse.ok()).toBe(true)

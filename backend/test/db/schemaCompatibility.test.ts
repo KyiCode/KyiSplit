@@ -64,7 +64,7 @@ describe("schema compatibility metadata", () => {
         expect(requirements.constraints).toContainEqual(expect.objectContaining({
             objectName: "users",
             kind: "unique",
-            columns: ["email"]
+            columns: ["username"]
         }))
         expect(requirements.constraints).toContainEqual(expect.objectContaining({
             objectName: "payments",
@@ -198,11 +198,11 @@ describe("schema compatibility metadata", () => {
     it("checks explicit expression and ordering indexes", () => {
         const metadata = matchingMetadata()
         metadata.indexes = metadata.indexes.filter(index => (
-            index.tableName !== "users"
+            index.tableName !== "repayments"
         ))
 
         expect(findSchemaCompatibilityIssues(requirements, metadata)).toContain(
-            "Missing unique index on public.users for lower(email)."
+            "Missing index on public.repayments for group_id, repayment_date DESC, created_at DESC, id DESC."
         )
     })
 

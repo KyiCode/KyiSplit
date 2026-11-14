@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { apiCreateGroup, apiSignUpAndLogIn, uniqueEmail } from './helpers'
+import { apiCreateGroup, apiSignUpAndLogIn, uniqueUsername } from './helpers'
 import { clearSafeDiagnostic, recordSafeDiagnostic } from './safeDiagnostics.mjs'
 
 test('narrow layout keeps long activity and amounts readable without horizontal overflow', async ({ page }) => {
   test.setTimeout(60_000)
   await page.setViewportSize({ width: 390, height: 844 })
   recordSafeDiagnostic('test-assertion', 'expectation-failed', 'mobile-test-account')
-  await apiSignUpAndLogIn(page, uniqueEmail('mobile-layout'))
+  await apiSignUpAndLogIn(page, uniqueUsername('mobile-layout'))
   clearSafeDiagnostic()
   const memberName = 'Alexandria The Traveler With A Long Group Name'
   const groupName = 'Weekend Across Tokyo, Yokohama, and Kamakura'

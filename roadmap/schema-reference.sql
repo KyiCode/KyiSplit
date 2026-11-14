@@ -10,16 +10,14 @@ CREATE DOMAIN public.kyisplit_money AS numeric
 
 CREATE TABLE public.users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    email character varying NOT NULL UNIQUE,
+    username character varying NOT NULL UNIQUE,
     password character varying NOT NULL,
-    CONSTRAINT users_email_normalized_check CHECK (
-        email = lower(btrim(email))
-        AND char_length(email) BETWEEN 1 AND 254
-        AND email ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'
+    CONSTRAINT users_username_normalized_check CHECK (
+        username = lower(btrim(username))
+        AND char_length(username) BETWEEN 3 AND 32
+        AND username ~ '^[a-z0-9_-]+$'
     )
 );
-
-CREATE UNIQUE INDEX users_email_lower_key ON public.users (lower(email));
 
 CREATE TABLE public.groups (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

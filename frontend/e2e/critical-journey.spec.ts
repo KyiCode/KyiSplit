@@ -11,7 +11,7 @@ import {
   installCurrencyFixture,
   logIn,
   signUp,
-  uniqueEmail,
+  uniqueUsername,
 } from './helpers'
 
 function markJourneyCheckpoint(name: string) {
@@ -24,18 +24,18 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
   await installCurrencyFixture(page)
 
   markJourneyCheckpoint('journey-owner-group')
-  const ownerEmail = uniqueEmail('journey-owner')
-  const blairEmail = uniqueEmail('journey-blair')
-  const caseyEmail = uniqueEmail('journey-casey')
+  const ownerUsername = uniqueUsername('journey-owner')
+  const blairUsername = uniqueUsername('journey-blair')
+  const caseyUsername = uniqueUsername('journey-casey')
 
-  await signUp(page, ownerEmail)
+  await signUp(page, ownerUsername)
   markJourneyCheckpoint('journey-owner-signup')
   recordSafeDiagnostic(
     'test-assertion',
     'expectation-failed',
     'journey-owner-login',
   )
-  await logIn(page, ownerEmail)
+  await logIn(page, ownerUsername)
   clearSafeDiagnostic()
   markJourneyCheckpoint('journey-owner-login')
   await page.getByRole('button', { name: /Start a new group/ }).click()
@@ -90,9 +90,9 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
   markJourneyCheckpoint('journey-invite-blair')
   await page.goto(inviteUrl)
   await page.getByRole('button', { name: 'Create an account' }).click()
-  await signUp(page, blairEmail)
+  await signUp(page, blairUsername)
   await page.goto('/auth')
-  await page.getByRole('textbox', { name: 'Email' }).fill(blairEmail)
+  await page.getByRole('textbox', { name: 'Username' }).fill(blairUsername)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expectSafePath(
@@ -108,9 +108,9 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
   markJourneyCheckpoint('journey-invite-casey')
   await page.goto(inviteUrl)
   await page.getByRole('button', { name: 'Create an account' }).click()
-  await signUp(page, caseyEmail)
+  await signUp(page, caseyUsername)
   await page.goto('/auth')
-  await page.getByRole('textbox', { name: 'Email' }).fill(caseyEmail)
+  await page.getByRole('textbox', { name: 'Username' }).fill(caseyUsername)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.getByLabel('Your name in this group').fill('Casey')
@@ -118,7 +118,7 @@ test('signup through repayment and confirmed deletion', async ({ page }) => {
   await expect(page.getByRole('list', { name: 'Group members' })).toContainText('Casey')
 
   await page.getByRole('button', { name: 'Sign out' }).click()
-  await logIn(page, ownerEmail)
+  await logIn(page, ownerUsername)
   await page.getByRole('button', { name: /Tokyo Weekend/ }).click()
   markJourneyCheckpoint('journey-expense-create')
   await page.getByRole('button', { name: /Add expense/ }).click()

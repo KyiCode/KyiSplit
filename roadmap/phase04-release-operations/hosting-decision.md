@@ -39,8 +39,8 @@ staging checks pass.
 | Logs | Structured stdout/stderr in Render; Task 09 configures retention and external transport |
 
 The environments use the same image and configuration names but distinct
-service URLs, `DATABASE_URL`, `JWT_KEY`, and release authority. No environment
-uses a separate source branch.
+service URLs, `DATABASE_URL`, `JWT_KEY`, `SIGNUP_TOKEN`, and release authority.
+No environment uses a separate source branch.
 
 ## Cost Boundary
 

@@ -18,10 +18,11 @@ function renderSignup() {
 
 async function completeSignup(user: ReturnType<typeof userEvent.setup>) {
   await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'friend@example.com',
+    screen.getByRole('textbox', { name: 'Username' }),
+    'friend_friend',
   )
   await user.type(screen.getByLabelText('Password'), 'password123')
+  await user.type(screen.getByLabelText('Signup token'), 'test-token')
 }
 
 test.each([
@@ -35,9 +36,10 @@ test.each([
   vi.stubGlobal('fetch', fetchMock)
   renderSignup()
   await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'friend@example.com',
+    screen.getByRole('textbox', { name: 'Username' }),
+    'friend_friend',
   )
+  await user.type(screen.getByLabelText('Signup token'), 'test-token')
   fireEvent.change(screen.getByLabelText('Password'), {
     target: { value: password },
   })
@@ -66,8 +68,9 @@ test('preserves signup values after rejection', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Account creation is temporarily unavailable.',
   )
-  expect(screen.getByRole('textbox', { name: 'Email' }))
-    .toHaveValue('friend@example.com')
+  expect(screen.getByRole('textbox', { name: 'Username' }))
+    .toHaveValue('friend_friend')
+  expect(screen.getByLabelText('Signup token')).toHaveValue('test-token')
   expect(screen.getByLabelText('Password')).toHaveValue('password123')
 })
 

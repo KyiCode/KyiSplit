@@ -32,7 +32,7 @@ describe("structured logger", () => {
             "postgresql://user:secret@example.test/db"
         ), {
             code: "23505",
-            constraint: "users_email_key",
+            constraint: "users_username_key",
             table: "users"
         })
 
@@ -58,7 +58,7 @@ describe("structured logger", () => {
                 message: "insert failed password=[REDACTED] " +
                     "[REDACTED_DATABASE_URL]",
                 code: "23505",
-                constraint: "users_email_key",
+                constraint: "users_username_key",
                 table: "users"
             }
         })

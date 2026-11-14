@@ -36,7 +36,7 @@ describe("validators", () => {
         ["isUserAuthorised", isUserAuthorised, ["user-1", "group-1"]],
         ["hasUser", hasUser, ["user-1"]],
         ["hasExpense", hasExpense, ["expense-1"]],
-        ["hasAccount", hasAccount, ["person@example.com"]]
+        ["hasAccount", hasAccount, ["person_name"]]
     ])("%s returns true when its query finds a row", async (_name, validator, args) => {
         queryMock.mockResolvedValue({ rows: [{}] } as never)
 

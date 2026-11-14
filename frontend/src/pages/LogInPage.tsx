@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import Brand from "../components/Brand"
-import EmailInput from "../components/EmailInput"
+import UsernameInput from "../components/UsernameInput"
 import PasswordInput from "../components/PasswordInput"
 import { logIn } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
@@ -9,7 +9,7 @@ import { apiErrorMessage } from "../api/client"
 function LogInPage() {
     const navigate = useNavigate()
     const location = useLocation()
-    const [email, setEmail] = useState("")
+    const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [errorMessage, setErrorMessage] = useState("")
     const [submitting, setSubmitting] = useState(false)
@@ -20,7 +20,7 @@ function LogInPage() {
         setSubmitting(true)
         setErrorMessage("")
         try {
-            await logIn(email, password)
+            await logIn(username, password)
             const pendingInvite = localStorage.getItem("pendingInvite")
             if (pendingInvite) {
                 navigate(`/join/${pendingInvite}`)
@@ -50,10 +50,10 @@ function LogInPage() {
                     <h1>Sign in</h1>
                     <p>Enter your details to continue.</p>
                 </header>
-                <EmailInput value={email} onChange={setEmail} />
+                <UsernameInput value={username} onChange={setUsername} />
                 <PasswordInput value={password} onChange={setPassword} />
                 {errorMessage && <div className="notice error small" role="alert">{errorMessage}</div>}
-                <button className="button primary full" disabled={!email || !password || submitting}>
+                <button className="button primary full" disabled={!username || !password || submitting}>
                     {submitting ? "Signing in…" : "Sign in"}
                 </button>
                 <p className="auth-switch">No account? <Link to="/signup">Create one</Link></p>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import Brand from "../components/Brand"
-import EmailInput from "../components/EmailInput"
+import UsernameInput from "../components/UsernameInput"
 import PasswordInput from "../components/PasswordInput"
 import { signUp } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
@@ -9,8 +9,9 @@ import { MAX_SIGNUP_PASSWORD_BYTES } from "../../../backend/src/contracts/api"
 
 function SignUpPage() {
     const navigate = useNavigate()
-    const [email, setEmail] = useState("")
+    const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [token, setToken] = useState("")
     const [errorMessage, setErrorMessage] = useState("")
     const [success, setSuccess] = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -24,7 +25,7 @@ function SignUpPage() {
         setSubmitting(true)
         setErrorMessage("")
         try {
-            await signUp(email, password)
+            await signUp(username, password, token)
             setSuccess(true)
             window.setTimeout(() => navigate("/auth"), 1200)
         } catch (error) {
@@ -45,18 +46,30 @@ function SignUpPage() {
             <form className="minimal-auth-card" onSubmit={handleSubmit}>
                 <header>
                     <h1>Create account</h1>
-                    <p>Enter your email and choose a password.</p>
+                    <p>Enter your username, password, and signup token.</p>
                 </header>
-                <EmailInput value={email} onChange={setEmail} />
+                <UsernameInput value={username} onChange={setUsername} />
                 <PasswordInput
                     value={password}
                     onChange={setPassword}
+                    autoComplete="new-password"
                     describedBy={
                         passwordWithinByteLimit
                             ? "signup-password-guidance"
                             : "signup-password-guidance signup-password-error"
                     }
                 />
+                <label className="field">
+                    <span>Signup token</span>
+                    <input
+                        type="password"
+                        autoComplete="off"
+                        placeholder="Provided by the group owner"
+                        required
+                        value={token}
+                        onChange={(event) => setToken(event.target.value)}
+                    />
+                </label>
                 <p className="field-hint" id="signup-password-guidance">
                     Use at least 8 characters and at most 72 UTF-8 bytes.
                     Some characters use multiple bytes.
@@ -68,7 +81,7 @@ function SignUpPage() {
                 )}
                 {errorMessage && <div className="notice error small" role="alert">{errorMessage}</div>}
                 {success && <div className="notice success small" role="status">Account created. Redirecting…</div>}
-                <button className="button primary full" disabled={!email || password.length < 8 || !passwordWithinByteLimit || submitting || success}>
+                <button className="button primary full" disabled={username.trim().length < 3 || password.length < 8 || !passwordWithinByteLimit || !token || submitting || success}>
                     {submitting ? "Creating account…" : "Create account"}
                 </button>
                 <p className="auth-switch">Already registered? <Link to="/auth">Sign in</Link></p>

@@ -12,12 +12,13 @@ export { isInvitePath }
 
 let sequence = 0
 
-export function uniqueEmail(prefix: string) {
+export function uniqueUsername(prefix: string) {
   sequence += 1
-  return `${prefix}-${Date.now()}-${sequence}@example.test`
+  return `${prefix}-${Date.now()}-${sequence}`.toLowerCase()
 }
 
 export const PASSWORD = 'correct horse battery staple'
+export const SIGNUP_TOKEN = 'e2e-only-signup-token'
 
 export async function installCurrencyFixture(page: Page) {
   await page.route('https://api.frankfurter.dev/v2/currencies', route => (
@@ -31,10 +32,11 @@ export async function installCurrencyFixture(page: Page) {
   ))
 }
 
-export async function signUp(page: Page, email: string) {
+export async function signUp(page: Page, username: string) {
   await page.goto('/signup')
-  await page.getByRole('textbox', { name: 'Email' }).fill(email)
+  await page.getByRole('textbox', { name: 'Username' }).fill(username)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+  await page.getByLabel('Signup token').fill(SIGNUP_TOKEN)
   const signupResponsePromise = page.waitForResponse(response => {
     try {
       return new URL(response.url()).pathname === '/api/users/signup'
@@ -63,9 +65,9 @@ export async function signUp(page: Page, email: string) {
   clearSafeDiagnostic()
 }
 
-export async function logIn(page: Page, email: string) {
+export async function logIn(page: Page, username: string) {
   await page.goto('/auth')
-  await page.getByRole('textbox', { name: 'Email' }).fill(email)
+  await page.getByRole('textbox', { name: 'Username' }).fill(username)
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect.poll(() => page.evaluate(() => (
@@ -85,17 +87,17 @@ export async function expectSafePath(
   )), { message: description }).toMatch(pattern)
 }
 
-export async function signUpAndLogIn(page: Page, email: string) {
-  await signUp(page, email)
-  await logIn(page, email)
+export async function signUpAndLogIn(page: Page, username: string) {
+  await signUp(page, username)
+  await logIn(page, username)
 }
 
-export async function apiSignUpAndLogIn(page: Page, email: string) {
+export async function apiSignUpAndLogIn(page: Page, username: string) {
   await expectOk(await page.request.post('/api/users/signup', {
-    data: { email, password: PASSWORD },
+    data: { username, password: PASSWORD, token: SIGNUP_TOKEN },
   }), 'Signup')
   await expectOk(await page.request.post('/api/users/login', {
-    data: { email, password: PASSWORD },
+    data: { username, password: PASSWORD },
   }), 'Login')
 }
 

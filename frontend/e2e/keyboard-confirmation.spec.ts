@@ -5,18 +5,18 @@ import {
   apiLogOut,
   apiSignUpAndLogIn,
   logIn,
-  uniqueEmail,
+  uniqueUsername,
 } from './helpers'
 
 async function prepareKeyboardGroup(page: Page) {
-  const ownerEmail = uniqueEmail('keyboard-owner')
-  await apiSignUpAndLogIn(page, ownerEmail)
+  const ownerUsername = uniqueUsername('keyboard-owner')
+  await apiSignUpAndLogIn(page, ownerUsername)
   const groupId = await apiCreateGroup(page, 'Keyboard check', 'Kai', 'SGD')
   const inviteUrl = await apiCreateInvite(page, groupId)
   const inviteToken = inviteUrl.split('/').pop()!
 
   await apiLogOut(page)
-  await apiSignUpAndLogIn(page, uniqueEmail('keyboard-member'))
+  await apiSignUpAndLogIn(page, uniqueUsername('keyboard-member'))
   const joinResponse = await page.request.post(
     `/api/groups/join/${inviteToken}`,
     { data: { userName: 'Sam' } },
@@ -24,7 +24,7 @@ async function prepareKeyboardGroup(page: Page) {
   expect(joinResponse.ok()).toBe(true)
 
   await apiLogOut(page)
-  await logIn(page, ownerEmail)
+  await logIn(page, ownerUsername)
   const membersResponse = await page.request.get(`/api/groups/${groupId}/members`)
   const memberPayload = await membersResponse.json() as {
     data: { members: Array<{ userId: string; userGroupName: string }> }

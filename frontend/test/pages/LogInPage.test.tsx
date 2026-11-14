@@ -28,16 +28,16 @@ test('keeps sign-in values after a recoverable rejection', async () => {
   )
   renderLogin()
 
-  const email = screen.getByRole('textbox', { name: 'Email' })
+  const username = screen.getByRole('textbox', { name: 'Username' })
   const password = screen.getByLabelText('Password')
-  await user.type(email, 'friend@example.com')
+  await user.type(username, 'friend_friend')
   await user.type(password, 'correct horse battery staple')
   await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Sign in is temporarily unavailable.',
   )
-  expect(email).toHaveValue('friend@example.com')
+  expect(username).toHaveValue('friend_friend')
   expect(password).toHaveValue('correct horse battery staple')
 })
 
@@ -45,13 +45,13 @@ test('continues to a saved invitation after sign-in', async () => {
   const user = userEvent.setup()
   localStorage.setItem('pendingInvite', 'invite-123')
   const fetchMock = installFetchQueue(successResponse({
-    user: { userId: 'user-1', email: 'friend@example.com' },
+    user: { userId: 'user-1', username: 'friend_friend' },
   }))
   renderLogin()
 
   await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'friend@example.com',
+    screen.getByRole('textbox', { name: 'Username' }),
+    'friend_friend',
   )
   await user.type(screen.getByLabelText('Password'), 'password123')
   await user.click(screen.getByRole('button', { name: 'Sign in' }))
@@ -79,8 +79,8 @@ test('prevents duplicate sign-in while authentication is pending', async () => {
   renderLogin()
 
   await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'friend@example.com',
+    screen.getByRole('textbox', { name: 'Username' }),
+    'friend_friend',
   )
   await user.type(screen.getByLabelText('Password'), 'password123')
   await user.click(screen.getByRole('button', { name: 'Sign in' }))
@@ -90,7 +90,7 @@ test('prevents duplicate sign-in while authentication is pending', async () => {
   await user.click(pendingButton)
   expect(fetchMock).toHaveBeenCalledOnce()
   resolveLogin(successResponse({
-    user: { userId: 'user-1', email: 'friend@example.com' },
+    user: { userId: 'user-1', username: 'friend_friend' },
   }))
   expect(await screen.findByRole('heading', { name: 'Groups' }))
     .toBeInTheDocument()

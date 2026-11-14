@@ -116,7 +116,7 @@ describe("authentication abuse controls", () => {
                 "content-type": "application/json",
                 "x-forwarded-for": forwardedFor
             },
-            body: JSON.stringify({ email: "bad", password: "bad" })
+            body: JSON.stringify({ username: "bad", password: "bad" })
         })
 
         expect((await request("203.0.113.10")).status).toBe(400)

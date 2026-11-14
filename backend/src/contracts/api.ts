@@ -2,7 +2,7 @@ export const API_ERROR_CODES = [
     "ALREADY_MEMBER",
     "CONFLICT",
     "DATA_INTEGRITY_ERROR",
-    "EMAIL_EXISTS",
+    "USERNAME_EXISTS",
     "FORBIDDEN",
     "FX_UNAVAILABLE",
     "INTERNAL_ERROR",
@@ -36,8 +36,12 @@ export interface FailureResponse {
 export type ApiResponse<T> = SuccessResponse<T> | FailureResponse
 
 export interface CredentialsRequest {
-    email: string
+    username: string
     password: string
+}
+
+export interface SignupRequest extends CredentialsRequest {
+    token: string
 }
 
 export interface MessageData {
@@ -46,7 +50,7 @@ export interface MessageData {
 
 export interface UserIdentity {
     userId: string
-    email: string
+    username: string
 }
 
 export interface LoginData {

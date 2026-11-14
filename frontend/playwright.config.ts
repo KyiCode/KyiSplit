@@ -107,6 +107,7 @@ export default defineConfig({
         AUTH_RATE_LIMIT_MAX_ATTEMPTS: '100',
         FRONTEND_URL: frontendOrigin,
         JWT_KEY: 'e2e-only-signing-key',
+        SIGNUP_TOKEN: 'e2e-only-signup-token',
         LOG_LEVEL: 'warn',
         E2E_APP_NODE_ENV: 'test',
         NODE_ENV: 'production',

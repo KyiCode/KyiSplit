@@ -79,11 +79,12 @@ function createRequest(body: Record<string, unknown>, userId = "user-1") {
 
 beforeEach(() => {
     vi.clearAllMocks()
+    process.env.SIGNUP_TOKEN = "signup-secret"
 })
 
 describe("user controller", () => {
     it("rejects sign-up when credentials are invalid", async () => {
-        const request = createRequest({ email: "" })
+        const request = createRequest({ username: "" })
         const response = createResponse()
 
         await signup(request, response)
@@ -92,7 +93,7 @@ describe("user controller", () => {
         expect(response.json).toHaveBeenCalledWith({
             status: "fail",
             code: "VALIDATION_ERROR",
-            message: "Invalid email or password"
+            message: "Enter a valid username, password, and signup token"
         })
         expect(queryMock).not.toHaveBeenCalled()
     })
@@ -100,19 +101,20 @@ describe("user controller", () => {
     it("normalizes credentials and rejects an existing account", async () => {
         accountMock.mockResolvedValue(true)
         const request = createRequest({
-            email: "  Person@Example.COM ",
-            password: "long-enough"
+            username: "  Person_Name ",
+            password: "long-enough",
+            token: "signup-secret"
         })
         const response = createResponse()
 
         await signup(request, response)
 
-        expect(accountMock).toHaveBeenCalledWith("person@example.com")
+        expect(accountMock).toHaveBeenCalledWith("person_name")
         expect(response.status).toHaveBeenCalledWith(409)
         expect(response.json).toHaveBeenCalledWith({
             status: "fail",
-            code: "EMAIL_EXISTS",
-            message: "Email already has an account"
+            code: "USERNAME_EXISTS",
+            message: "Username is already taken"
         })
         expect(queryMock).not.toHaveBeenCalled()
     })
@@ -123,8 +125,9 @@ describe("user controller", () => {
         hashMock.mockResolvedValue("hashed-password")
         queryMock.mockResolvedValue({ rows: [] } as never)
         const request = createRequest({
-            email: "person@example.com",
-            password: "long-enough"
+            username: "person_name",
+            password: "long-enough",
+            token: "signup-secret"
         })
         const response = createResponse()
 
@@ -132,8 +135,8 @@ describe("user controller", () => {
 
         expect(hashMock).toHaveBeenCalledWith("long-enough", "salt")
         expect(queryMock).toHaveBeenCalledWith(
-            "INSERT INTO users (email, password) VALUES ($1, $2)",
-            ["person@example.com", "hashed-password"]
+            "INSERT INTO users (username, password) VALUES ($1, $2)",
+            ["person_name", "hashed-password"]
         )
         expect(response.status).toHaveBeenCalledWith(201)
     })
@@ -143,8 +146,9 @@ describe("user controller", () => {
 
         await signup(
             createRequest({
-                email: "person@example.com",
-                password: "short"
+                username: "person_name",
+                password: "short",
+                token: "signup-secret"
             }),
             response
         )
@@ -165,7 +169,7 @@ describe("user controller", () => {
         const response = createResponse()
 
         await signup(
-            createRequest({ email: "person@example.com", password }),
+            createRequest({ username: "person_name", password, token: "signup-secret" }),
             response
         )
 
@@ -180,7 +184,7 @@ describe("user controller", () => {
         const response = createResponse()
 
         await signup(
-            createRequest({ email: "person@example.com", password }),
+            createRequest({ username: "person_name", password, token: "signup-secret" }),
             response
         )
 
@@ -198,14 +202,14 @@ describe("user controller", () => {
     it("creates a cookie session without returning a token", async () => {
         getUserMock.mockResolvedValue({
             id: "user-1",
-            email: "person@example.com",
+            username: "person_name",
             password: "hashed-password"
         })
         accountMock.mockResolvedValue(true)
         compareMock.mockResolvedValue(true)
         tokenMock.mockReturnValue("signed-token")
         const request = createRequest({
-            email: " PERSON@example.com ",
+            username: " Person_Name ",
             password: "long-enough"
         })
         const response = createResponse()
@@ -213,7 +217,7 @@ describe("user controller", () => {
         await login(request, response)
 
         expect(getUserMock).toHaveBeenCalledTimes(1)
-        expect(getUserMock).toHaveBeenCalledWith("person@example.com")
+        expect(getUserMock).toHaveBeenCalledWith("person_name")
         expect(accountMock).not.toHaveBeenCalled()
         expect(compareMock).toHaveBeenCalledWith("long-enough", "hashed-password")
         expect(tokenMock).toHaveBeenCalledWith("user-1", response)
@@ -222,7 +226,7 @@ describe("user controller", () => {
             data: {
                 user: {
                     userId: "user-1",
-                    email: "person@example.com"
+                    username: "person_name"
                 }
             }
         })
@@ -234,7 +238,7 @@ describe("user controller", () => {
             "an incorrect password",
             {
                 id: "user-1",
-                email: "person@example.com",
+                username: "person_name",
                 password: "hashed-password"
             },
             false
@@ -246,7 +250,7 @@ describe("user controller", () => {
 
         await login(
             createRequest({
-                email: "person@example.com",
+                username: "person_name",
                 password: "long-enough"
             }),
             response
@@ -266,7 +270,7 @@ describe("user controller", () => {
         const response = createResponse()
 
         await login(
-            createRequest({ email: "not-an-email", password: "long-enough" }),
+            createRequest({ username: "bad username!", password: "long-enough" }),
             response
         )
 
@@ -278,14 +282,14 @@ describe("user controller", () => {
         const password = "a".repeat(80)
         getUserMock.mockResolvedValue({
             id: "user-1",
-            email: "person@example.com",
+            username: "person_name",
             password: "hashed-password"
         })
         compareMock.mockResolvedValue(true)
         const response = createResponse()
 
         await login(
-            createRequest({ email: "person@example.com", password }),
+            createRequest({ username: "person_name", password }),
             response
         )
 
@@ -328,7 +332,7 @@ describe("user controller", () => {
     it("uses a generic response even when password comparison fails", async () => {
         getUserMock.mockResolvedValue({
             id: "user-1",
-            email: "person@example.com",
+            username: "person_name",
             password: "hashed-password"
         })
         accountMock.mockResolvedValue(true)
@@ -337,7 +341,7 @@ describe("user controller", () => {
 
         await login(
             createRequest({
-                email: "person@example.com",
+                username: "person_name",
                 password: "wrong-but-long"
             }),
             response

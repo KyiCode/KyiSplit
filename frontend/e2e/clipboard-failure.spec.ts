@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { apiCreateGroup, apiSignUpAndLogIn, uniqueEmail } from './helpers'
+import { apiCreateGroup, apiSignUpAndLogIn, uniqueUsername } from './helpers'
 
 test('clipboard denial gives a manual copy fallback', async ({ page }) => {
   await page.addInitScript(() => {
@@ -12,7 +12,7 @@ test('clipboard denial gives a manual copy fallback', async ({ page }) => {
       },
     })
   })
-  await apiSignUpAndLogIn(page, uniqueEmail('clipboard-owner'))
+  await apiSignUpAndLogIn(page, uniqueUsername('clipboard-owner'))
   const groupId = await apiCreateGroup(page, 'Clipboard check', 'Alex', 'USD')
   await page.goto(`/group/${groupId}`)
   await page.getByRole('button', { name: 'Invite people' }).click()

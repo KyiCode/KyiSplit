@@ -8,13 +8,13 @@ import {
   expectSafePath,
   installCurrencyFixture,
   logIn,
-  uniqueEmail,
+  uniqueUsername,
 } from './helpers'
 
 // Keep these independent scenarios in a deliberately non-narrative order.
 // The repeated run and this shuffled order guard against state leaking between tests.
 test('group loading retries after a transient browser failure', async ({ page }) => {
-  await apiSignUpAndLogIn(page, uniqueEmail('retry-owner'))
+  await apiSignUpAndLogIn(page, uniqueUsername('retry-owner'))
   await apiCreateGroup(page, 'Retry group', 'Owner')
   let attempts = 0
   await page.route('**/api/groups/grouplist', async route => {
@@ -31,13 +31,13 @@ test('group loading retries after a transient browser failure', async ({ page })
 })
 
 test('expired invitation is rejected', async ({ page, request }) => {
-  const owner = uniqueEmail('expired-owner')
+  const owner = uniqueUsername('expired-owner')
   await apiSignUpAndLogIn(page, owner)
   const groupId = await apiCreateGroup(page, 'Expired invite group', 'Owner')
   const inviteUrl = await apiCreateInvite(page, groupId)
   const token = inviteUrl.split('/').pop()!
   await apiLogOut(page)
-  await apiSignUpAndLogIn(page, uniqueEmail('expired-joiner'))
+  await apiSignUpAndLogIn(page, uniqueUsername('expired-joiner'))
 
   const expired = await request.post(
     `http://127.0.0.1:5512/__e2e/invites/${token}/expire`,
@@ -51,7 +51,7 @@ test('expired invitation is rejected', async ({ page, request }) => {
 
 test('provider failure leaves no partial expense', async ({ page, request }) => {
   await installCurrencyFixture(page)
-  await apiSignUpAndLogIn(page, uniqueEmail('fx-owner'))
+  await apiSignUpAndLogIn(page, uniqueUsername('fx-owner'))
   const groupId = await apiCreateGroup(page, 'FX rollback group', 'Owner', 'USD')
   await page.goto(`/group/${groupId}/addexpense`)
   await page.getByLabel('Description').fill('Failed conversion')
@@ -71,17 +71,17 @@ test('provider failure leaves no partial expense', async ({ page, request }) => 
 })
 
 test('a user cannot open another group', async ({ page }) => {
-  await apiSignUpAndLogIn(page, uniqueEmail('group-owner'))
+  await apiSignUpAndLogIn(page, uniqueUsername('group-owner'))
   const groupId = await apiCreateGroup(page, 'Private group', 'Owner')
   await apiLogOut(page)
-  await apiSignUpAndLogIn(page, uniqueEmail('outsider'))
+  await apiSignUpAndLogIn(page, uniqueUsername('outsider'))
 
   await page.goto(`/group/${groupId}`)
   await expect(page.getByRole('heading', { name: 'Group access denied' })).toBeVisible()
 })
 
 test('unauthenticated navigation is restored after login', async ({ page }) => {
-  const owner = uniqueEmail('restore-owner')
+  const owner = uniqueUsername('restore-owner')
   await apiSignUpAndLogIn(page, owner)
   const groupId = await apiCreateGroup(page, 'Restored group', 'Owner')
   await apiLogOut(page)

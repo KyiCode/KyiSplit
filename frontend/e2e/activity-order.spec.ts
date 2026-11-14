@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { apiCreateGroup, apiSignUpAndLogIn, uniqueEmail } from './helpers'
+import { apiCreateGroup, apiSignUpAndLogIn, uniqueUsername } from './helpers'
 
 test('recent activity is ordered by local expense date', async ({ page }) => {
-  const ownerEmail = uniqueEmail('activity-order')
-  await apiSignUpAndLogIn(page, ownerEmail)
+  const ownerUsername = uniqueUsername('activity-order')
+  await apiSignUpAndLogIn(page, ownerUsername)
   const groupId = await apiCreateGroup(page, 'Activity order', 'Alex', 'USD')
   const membersResponse = await page.request.get(`/api/groups/${groupId}/members`)
   expect(membersResponse.ok()).toBe(true)

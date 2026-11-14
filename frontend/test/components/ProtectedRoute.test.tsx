@@ -20,7 +20,7 @@ test('restores the requested protected path after authentication', async () => {
   installFetchQueue(
     failureResponse('Sign in required.', 401, 'UNAUTHENTICATED'),
     successResponse({
-      user: { userId: 'user-1', email: 'friend@example.com' },
+      user: { userId: 'user-1', username: 'friend_friend' },
     }),
     successResponse({ userId: 'user-1' }),
   )
@@ -38,8 +38,8 @@ test('restores the requested protected path after authentication', async () => {
   expect(await screen.findByRole('heading', { name: 'Sign in' }))
     .toBeInTheDocument()
   await user.type(
-    screen.getByRole('textbox', { name: 'Email' }),
-    'friend@example.com',
+    screen.getByRole('textbox', { name: 'Username' }),
+    'friend_friend',
   )
   await user.type(screen.getByLabelText('Password'), 'password123')
   await user.click(screen.getByRole('button', { name: 'Sign in' }))
