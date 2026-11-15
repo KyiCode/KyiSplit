@@ -45,7 +45,11 @@ test.each([
     target: { value: password },
   })
 
-  expect(screen.getByText('Use at least 4 characters.')).toBeInTheDocument()
+  expect(screen.getByLabelText('Password')).toHaveAttribute(
+    'placeholder',
+    'At least 4 characters',
+  )
+  expect(screen.queryByText('Use at least 4 characters.')).not.toBeInTheDocument()
   const button = screen.getByRole('button', { name: 'Create account' })
   if (rejected) {
     expect(button).toBeDisabled()

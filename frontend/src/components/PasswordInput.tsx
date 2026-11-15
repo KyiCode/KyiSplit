@@ -5,13 +5,15 @@ type PasswordInputProp = {
     onChange: (value: string) => void
     describedBy?: string
     autoComplete?: "current-password" | "new-password"
+    placeholder?: string
 }
 
 function PasswordInput({
     value,
     onChange,
     describedBy,
-    autoComplete = "current-password"
+    autoComplete = "current-password",
+    placeholder = "Enter your password"
 }: PasswordInputProp) {
     const [hidePassword, setHidePassword] = useState(true)
     const inputId = useId()
@@ -25,7 +27,7 @@ function PasswordInput({
                     value={value}
                     type={hidePassword ? "password" : "text"}
                     autoComplete={autoComplete}
-                    placeholder="At least 8 characters"
+                    placeholder={placeholder}
                     aria-describedby={describedBy}
                     onChange={(e) => onChange(e.target.value)}
                 />

@@ -53,11 +53,8 @@ function SignUpPage() {
                     value={password}
                     onChange={setPassword}
                     autoComplete="new-password"
-                    describedBy={
-                        passwordWithinByteLimit
-                            ? "signup-password-guidance"
-                            : "signup-password-guidance signup-password-error"
-                    }
+                    placeholder="At least 4 characters"
+                    describedBy={passwordWithinByteLimit ? undefined : "signup-password-error"}
                 />
                 <label className="field">
                     <span>Signup token</span>
@@ -70,9 +67,6 @@ function SignUpPage() {
                         onChange={(event) => setToken(event.target.value)}
                     />
                 </label>
-                <p className="field-hint" id="signup-password-guidance">
-                    Use at least 4 characters.
-                </p>
                 {!passwordWithinByteLimit && (
                     <p className="notice error small" id="signup-password-error" role="alert">
                         Password is too long.
