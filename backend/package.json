@@ -14,7 +14,7 @@
     "schema:check": "tsx scripts/checkSchema.ts",
     "db:info": "flyway -configFiles=flyway.conf info",
     "db:migrate": "flyway -configFiles=flyway.conf migrate",
-    "db:migrate:release": "./flyway/flyway -configFiles=flyway.conf migrate",
+    "db:migrate:release": "node scripts/runProfile.mjs prod migrate",
     "db:validate": "flyway -configFiles=flyway.conf validate",
     "db:info:local": "node scripts/runProfile.mjs local info",
     "db:migrate:local": "node scripts/runProfile.mjs local migrate",

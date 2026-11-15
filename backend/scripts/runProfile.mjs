@@ -33,9 +33,49 @@ export function buildProfileEnvironment(
     }
     environment.DB_PROFILE = profile
     if (['info', 'migrate', 'validate'].includes(mode)) {
+        configureFlywayEnvironment(profile, environment)
         validateFlywayTarget(profile, environment)
     }
     return environment
+}
+
+export function configureFlywayEnvironment(profile, environment) {
+    const applicationUrl = profile === 'local'
+        ? environment.LOCAL_DATABASE_URL?.trim()
+        : (environment.SUPABASE_DATABASE_URL || environment.DATABASE_URL)?.trim()
+    if (!applicationUrl) {
+        throw new Error(profile === 'local'
+            ? 'LOCAL_DATABASE_URL must be configured for local migrations'
+            : 'SUPABASE_DATABASE_URL or DATABASE_URL must be configured for production migrations')
+    }
+
+    let parsedApplicationUrl
+    try {
+        parsedApplicationUrl = new URL(applicationUrl)
+    } catch {
+        throw new Error('Application database URL is invalid')
+    }
+    if (!['postgres:', 'postgresql:'].includes(parsedApplicationUrl.protocol)) {
+        throw new Error('Application database URL must be PostgreSQL')
+    }
+
+    const explicitFlywayUrl = environment.FLYWAY_URL?.trim()
+    if (
+        profile === 'prod' &&
+        !explicitFlywayUrl &&
+        parsedApplicationUrl.hostname.includes('pooler.supabase.com') &&
+        parsedApplicationUrl.port === '6543'
+    ) {
+        throw new Error('Set FLYWAY_URL to a direct or session-mode Supabase connection for migrations')
+    }
+
+    environment.FLYWAY_URL = explicitFlywayUrl || (
+        `jdbc:postgresql://${parsedApplicationUrl.host}${parsedApplicationUrl.pathname}${parsedApplicationUrl.search}`
+    )
+    environment.FLYWAY_USER = environment.FLYWAY_USER?.trim() ||
+        decodeURIComponent(parsedApplicationUrl.username)
+    environment.FLYWAY_PASSWORD = environment.FLYWAY_PASSWORD ||
+        decodeURIComponent(parsedApplicationUrl.password)
 }
 
 export function validateFlywayTarget(profile, environment) {
@@ -68,8 +108,11 @@ export function validateFlywayTarget(profile, environment) {
     if (profile === 'prod' && (local || !hostname.includes('supabase'))) {
         throw new Error('Production Flyway commands require a hosted Supabase target')
     }
-    if (profile === 'prod' && !environment.FLYWAY_PASSWORD?.trim()) {
-        throw new Error('FLYWAY_PASSWORD must be configured for production migrations')
+    if (profile === 'prod' && (
+        !environment.FLYWAY_USER?.trim() ||
+        !environment.FLYWAY_PASSWORD?.trim()
+    )) {
+        throw new Error('Production migration credentials must be configured')
     }
 }
 
@@ -84,8 +127,15 @@ function main() {
     const environment = buildProfileEnvironment(profile, mode)
     const require = createRequire(import.meta.url)
     const flywayCommand = ['info', 'migrate', 'validate'].includes(mode)
+    const bundledFlyway = path.join(
+        process.cwd(),
+        'flyway',
+        process.platform === 'win32' ? 'flyway.cmd' : 'flyway'
+    )
     const executable = flywayCommand
-        ? (process.platform === 'win32' ? 'flyway.cmd' : 'flyway')
+        ? (fs.existsSync(bundledFlyway)
+            ? bundledFlyway
+            : (process.platform === 'win32' ? 'flyway.cmd' : 'flyway'))
         : process.execPath
     const args = flywayCommand
         ? ['-configFiles=flyway.conf', mode]

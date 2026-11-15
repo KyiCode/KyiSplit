@@ -39,8 +39,8 @@ directories. Configure these variables before starting the application:
 | Project | Variable | Purpose |
 | --- | --- | --- |
 | Backend | `DATABASE_URL` | PostgreSQL connection string |
-| Migration runner | `FLYWAY_URL` | JDBC PostgreSQL URL for schema migrations |
-| Migration runner | `FLYWAY_USER` / `FLYWAY_PASSWORD` | Database role credentials for Flyway |
+| Migration runner | `FLYWAY_URL` | Optional JDBC URL override for a direct or session-mode migration connection |
+| Migration runner | `FLYWAY_USER` / `FLYWAY_PASSWORD` | Optional credential overrides; normally derived from the existing database URL |
 | Backend | `JWT_KEY` | Secret used to sign session tokens |
 | Backend | `SIGNUP_TOKEN` | Private token required to create an account |
 | Backend | `BCRYPT_SALT` | Password-hashing cost |
@@ -75,12 +75,14 @@ creates the current username-based schema on a fresh database. Applied
 migrations are immutable; add a new version for later changes. Application
 startup never applies migrations.
 
-Install [Flyway Command-line 13.11.1](https://documentation.red-gate.com/flyway/reference/usage/command-line) and configure `FLYWAY_URL`, `FLYWAY_USER`,
-and `FLYWAY_PASSWORD` for the target database. `FLYWAY_URL` must use JDBC form,
-such as `jdbc:postgresql://host:5432/database?sslmode=require`. Never commit
-these credentials. For hosted deployments, use a direct or session-mode
-PostgreSQL connection suitable for migration locks; do not use transaction
-pooling.
+Install [Flyway Command-line 13.11.1](https://documentation.red-gate.com/flyway/reference/usage/command-line). The profile commands derive Flyway's JDBC URL,
+username, and password from the existing `LOCAL_DATABASE_URL`,
+`SUPABASE_DATABASE_URL`, or `DATABASE_URL`; you do not need to duplicate those
+values. If the app uses Supabase transaction pooling, set only `FLYWAY_URL` to a
+direct or session-mode JDBC connection, such as
+`jdbc:postgresql://host:5432/database?sslmode=require`. The existing database
+URL supplies credentials unless you explicitly override them. Never commit
+credentials.
 
 Check pending migrations, then apply them:
 
@@ -139,8 +141,6 @@ New-Item -ItemType Directory -Force .e2e | Out-Null
 initdb -D .e2e/local-postgres -U kyisplit_local --auth-local=trust --auth-host=trust --encoding=UTF8
 pg_ctl -D .e2e/local-postgres -l .e2e/local-postgres/server.log -o "-p 55433 -h 127.0.0.1" -w start
 createdb -h 127.0.0.1 -p 55433 -U kyisplit_local kyisplit_local
-$env:FLYWAY_URL = "jdbc:postgresql://127.0.0.1:55433/kyisplit_local"
-$env:FLYWAY_USER = "kyisplit_local"
 npm.cmd --prefix backend run db:migrate:local
 ```
 

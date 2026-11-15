@@ -17,6 +17,83 @@ afterEach(async () => {
 })
 
 describe("profile command runner", () => {
+    it("derives Flyway JDBC target and credentials from the existing Supabase URL", async () => {
+        const directory = await createTemporaryDirectory()
+        await fs.writeFile(path.join(directory, ".env.prod"), [
+            "SUPABASE_DATABASE_URL=postgresql://dbuser:p%40ss@db.project.supabase.co:5432/postgres?sslmode=require",
+            "NODE_ENV=production"
+        ].join("\n"))
+        const { buildProfileEnvironment } = await import(
+            pathToFileURL(profileRunner).href
+        ) as {
+            buildProfileEnvironment: (
+                profile: "prod",
+                mode: "migrate",
+                environment: NodeJS.ProcessEnv,
+                directory: string
+            ) => NodeJS.ProcessEnv
+        }
+
+        const environment = buildProfileEnvironment("prod", "migrate", {}, directory)
+
+        expect(environment.FLYWAY_URL).toBe(
+            "jdbc:postgresql://db.project.supabase.co:5432/postgres?sslmode=require"
+        )
+        expect(environment.FLYWAY_USER).toBe("dbuser")
+        expect(environment.FLYWAY_PASSWORD).toBe("p@ss")
+    })
+
+    it("derives Flyway credentials from a local profile without leaving loopback", async () => {
+        const directory = await createTemporaryDirectory()
+        await fs.writeFile(path.join(directory, ".env.local"),
+            "LOCAL_DATABASE_URL=postgresql://local-user:local-pass@127.0.0.1:55433/kyisplit_local\n")
+        const { buildProfileEnvironment } = await import(
+            pathToFileURL(profileRunner).href
+        ) as {
+            buildProfileEnvironment: (
+                profile: "local",
+                mode: "migrate",
+                environment: NodeJS.ProcessEnv,
+                directory: string
+            ) => NodeJS.ProcessEnv
+        }
+
+        const environment = buildProfileEnvironment("local", "migrate", {}, directory)
+
+        expect(environment.FLYWAY_URL).toBe(
+            "jdbc:postgresql://127.0.0.1:55433/kyisplit_local"
+        )
+        expect(environment.FLYWAY_USER).toBe("local-user")
+        expect(environment.FLYWAY_PASSWORD).toBe("local-pass")
+    })
+
+    it("requires a migration-safe Flyway URL when the application uses Supabase transaction pooling", async () => {
+        const directory = await createTemporaryDirectory()
+        await fs.writeFile(path.join(directory, ".env.prod"), [
+            "SUPABASE_DATABASE_URL=postgresql://dbuser:dbpass@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres",
+            "NODE_ENV=production"
+        ].join("\n"))
+        const { buildProfileEnvironment } = await import(
+            pathToFileURL(profileRunner).href
+        ) as {
+            buildProfileEnvironment: (
+                profile: "prod",
+                mode: "migrate",
+                environment: NodeJS.ProcessEnv,
+                directory: string
+            ) => NodeJS.ProcessEnv
+        }
+
+        expect(() => buildProfileEnvironment("prod", "migrate", {}, directory))
+            .toThrow("Set FLYWAY_URL to a direct or session-mode Supabase connection for migrations")
+        expect(buildProfileEnvironment("prod", "migrate", {
+            FLYWAY_URL: "jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require"
+        }, directory)).toMatchObject({
+            FLYWAY_USER: "dbuser",
+            FLYWAY_PASSWORD: "dbpass"
+        })
+    })
+
     it("requires loopback targets for local Flyway commands", async () => {
         const { validateFlywayTarget } = await import(
             pathToFileURL(profileRunner).href
@@ -41,9 +118,10 @@ describe("profile command runner", () => {
         })).toThrow("Production Flyway commands require a hosted Supabase target")
         expect(() => validateFlywayTarget("prod", {
             FLYWAY_URL: "jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require"
-        })).toThrow("FLYWAY_PASSWORD must be configured for production migrations")
+        })).toThrow("Production migration credentials must be configured")
         expect(() => validateFlywayTarget("prod", {
             FLYWAY_URL: "jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require",
+            FLYWAY_USER: "dbuser",
             FLYWAY_PASSWORD: "safe-test-password"
         })).not.toThrow()
     })

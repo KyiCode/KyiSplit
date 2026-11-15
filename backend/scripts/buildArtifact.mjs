@@ -25,6 +25,7 @@ await requirePath(path.join(flywayHome, process.platform === 'win32' ? 'flyway.c
 
 await fs.rm(artifactRoot, { force: true, recursive: true })
 await fs.mkdir(artifactRoot, { recursive: true })
+await fs.mkdir(path.join(artifactRoot, 'scripts'), { recursive: true })
 await Promise.all([
   fs.cp(path.join(backendRoot, 'dist'), path.join(artifactRoot, 'dist'), {
     recursive: true,
@@ -38,6 +39,10 @@ await Promise.all([
   fs.cp(flywayHome, path.join(artifactRoot, 'flyway'), {
     recursive: true,
   }),
+  fs.copyFile(
+    path.join(backendRoot, 'scripts', 'runProfile.mjs'),
+    path.join(artifactRoot, 'scripts', 'runProfile.mjs'),
+  ),
   fs.copyFile(
     path.join(backendRoot, 'package.json'),
     path.join(artifactRoot, 'package.json'),

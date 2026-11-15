@@ -17,8 +17,9 @@ reviewable production-like configuration.
 - Runtime secrets and database configuration are injected by the platform and
   no secret values are committed or printed.
 - Render runs `npm run db:migrate:release` as a
-  pre-deploy step against that environment's injected Flyway JDBC credentials;
-  migration failure blocks the deploy, and the app itself never migrates at
+  pre-deploy step using the existing database URL and credentials; if that URL
+  uses transaction pooling, configure a direct or session-mode `FLYWAY_URL`.
+  Migration failure blocks the deploy, and the app itself never migrates at
   startup.
 - The deployed artifact contains the pinned Flyway CLI, configuration, and
   versioned migration files required by the pre-deploy command.
