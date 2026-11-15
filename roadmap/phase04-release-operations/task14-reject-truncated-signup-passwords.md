@@ -16,7 +16,7 @@ Backend credential validation, signup handling, and authentication regression te
 ## Acceptance Criteria
 
 - Reject signup passwords exceeding 72 UTF-8 bytes before hashing or database writes. The shared API contract publishes this limit.
-- Keep the existing minimum length and email rules; use byte length rather than JavaScript character count for the bcrypt maximum.
+- Keep the existing minimum password length and username validation; use byte length rather than JavaScript character count for the bcrypt maximum.
 - Keep login compatible with previously accepted passwords, including passwords longer than 72 bytes within the existing login limits.
 - Return the established validation error envelope with an actionable signup message; do not change password hashing or require account resets.
 - Cover exactly 72 bytes, 73 bytes, multibyte input, and existing login compatibility. All acceptance cases pass.

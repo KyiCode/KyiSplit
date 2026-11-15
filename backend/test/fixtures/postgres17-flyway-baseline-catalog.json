@@ -44,7 +44,7 @@
     },
     {
       "table_name": "users",
-      "column_name": "email",
+      "column_name": "username",
       "column_type": "character varying",
       "is_not_null": true
     },
@@ -398,13 +398,13 @@
       "object_name": "users",
       "object_kind": "unique",
       "columns": [
-        "email"
+        "username"
       ],
       "referenced_schema": null,
       "referenced_table": null,
       "referenced_columns": [],
       "delete_action": null,
-      "definition": "UNIQUE (email)",
+      "definition": "UNIQUE (username)",
       "is_validated": true
     },
     {
@@ -424,13 +424,13 @@
       "object_name": "users",
       "object_kind": "check",
       "columns": [
-        "email"
+        "username"
       ],
       "referenced_schema": null,
       "referenced_table": null,
       "referenced_columns": [],
       "delete_action": null,
-      "definition": "CHECK (email::text = lower(btrim(email::text)) AND char_length(email::text) >= 1 AND char_length(email::text) <= 254 AND email::text ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'::text)",
+      "definition": "CHECK (username::text = lower(btrim(username::text)) AND char_length(username::text) >= 3 AND char_length(username::text) <= 32 AND username::text ~ '^[a-z0-9_-]+$'::text)",
       "is_validated": true
     },
     {
@@ -1014,12 +1014,6 @@
     }
   ],
   "indexes": [
-    {
-      "table_name": "users",
-      "is_unique": true,
-      "is_valid": true,
-      "definition": "CREATE UNIQUE INDEX users_email_lower_key ON public.users USING btree (lower((email)::text))"
-    },
     {
       "table_name": "repayments",
       "is_unique": false,

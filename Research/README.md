@@ -11,7 +11,7 @@ KyiSplit already has the core accounting needed by a private group of friends. T
 
 ## Scope and assumptions
 
-The comparison uses the repository's existing private-friends audience, two-decimal money entry, member permissions, manual schema administration, and delete-and-recreate correction policy. Splitwise's broader feature set is a benchmark for recommendations, rather than a requirement to copy every feature.
+The comparison uses the repository's existing private-friends audience, two-decimal money entry, member permissions, Flyway migration administration, and delete-and-recreate correction policy. Splitwise's broader feature set is a benchmark for recommendations, rather than a requirement to copy every feature.
 
 Splitwise claims come from public official product and help pages. This is a documentation and source-code comparison; it does not establish current behavior inside a signed-in Splitwise account or visual usability of either app. Prices and an exact free daily expense allowance are omitted because the reviewed official pages do not establish a universal current value.
 

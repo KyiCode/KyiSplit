@@ -56,7 +56,7 @@ migrations, contracts, and end-to-end tests unreliable.
 
 - The release decisions in [`../README.md`](../README.md).
 - The existing Supabase PostgreSQL schema described for context in
-  [`../schema-reference.sql`](../schema-reference.sql).
+  [`../../backend/db/migrations/V1__create_current_schema.sql`](../../backend/db/migrations/V1__create_current_schema.sql).
 - A test database is not required for this phase; database behavior is isolated
   at the pool/client boundary in backend tests. Phase 02 adds migration-backed
   integration tests.

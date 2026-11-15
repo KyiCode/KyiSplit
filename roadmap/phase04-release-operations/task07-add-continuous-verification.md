@@ -11,7 +11,7 @@ Reject unreproducible or incompatible changes before producing a release
 artifact.
 
 Complete the 2026-10-14 local review follow-up Tasks 22–32 before resuming this
-task. Reuse the corrected schema checker and safely diagnosable browser suite;
+task. Reuse the Flyway migration set and safely diagnosable browser suite;
 local success does not replace the remote workflow verification below.
 
 Task 21 supplies the repository-only workflow and artifact gates. Reuse that
@@ -23,8 +23,8 @@ workflow verification. Task 21 completion alone does not complete this task.
 - CI uses a pinned Node.js version and locked installs for backend and frontend.
 - It runs backend tests, frontend tests, lint, production build, and the
   deterministic Chromium smoke suite.
-- A schema compatibility command checks the structures and constraints the
-  application relies on against an explicitly configured disposable database.
+- CI applies all Flyway migrations to an explicitly configured empty,
+  disposable PostgreSQL database, then validates the migration history.
 - The pipeline never falls back to an application database and does not expose
   secrets or test invitation links in logs or artifacts.
 - A successful run produces one checksummed, versioned artifact from Task 04;
@@ -33,7 +33,8 @@ workflow verification. Task 21 completion alone does not complete this task.
 
 ## Verification
 
-- Validate the workflow syntax locally where tooling permits.
+- Validate the workflow syntax locally where tooling permits and confirm the
+  fresh-database migration job applies V1 and Flyway validation passes.
 - Run the workflow on a branch and record a successful clean run.
 - Introduce a temporary failing check and confirm artifact publication is
   skipped, then remove the temporary change.

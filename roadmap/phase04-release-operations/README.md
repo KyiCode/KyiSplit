@@ -15,6 +15,8 @@ private same-origin HTTPS release with documented recovery and onboarding.
   authorization and recovery paths.
 - Build one versioned production artifact that serves the browser application
   and API from the same origin.
+- Apply versioned Flyway migrations before deployment and verify them against
+  fresh and disposable PostgreSQL databases.
 - Select and configure a managed Node.js host, add continuous verification,
   and harden production runtime behavior.
 - Establish monitoring, backup, incident, rollback, deployment, and private
@@ -27,13 +29,12 @@ private same-origin HTTPS release with documented recovery and onboarding.
 
 - Public self-service signup, billing, organization administration, native
   applications, and multi-region availability.
-- Automated database migrations; schema changes remain manually administered.
 
 ## Dependencies
 
 - Phase 03 is complete and its automated verification passes.
-- The database used by end-to-end tests is explicitly configured and matches
-  [`../schema-reference.sql`](../schema-reference.sql).
+- The database used by end-to-end tests is explicitly configured and created
+  from the checked-in Flyway migrations.
 
 ## Tasks
 
@@ -45,10 +46,9 @@ The 2026-10-11 review identified additional work before deployment. Execute
 Tasks 12–21 in the order below, then Tasks 22–32, then resume Tasks 07–11. Task numbers
 retain the existing task links and completed history.
 
-This follow-up contains only repository changes and local verification that
-the agent can complete autonomously. It does not require account setup, secret
-provisioning, a manually prepared database, schema administration, or actions
-from the developer. Schema-backed idempotency is outside this follow-up.
+This follow-up contains repository changes and local verification. Database
+credentials are injected at runtime; migration tests use explicitly disposable
+PostgreSQL databases. Schema-backed idempotency is outside this follow-up.
 
 The follow-up totals 30 points. Task 21 delivers the repository-only CI gates
 within existing Task 07. Task 07 retains its full acceptance criteria and must
@@ -85,7 +85,7 @@ Task 22, not completed roadmap work. Tasks 19 and 20 retain their recorded
 offline completion; Tasks 23 and 24 address the newly observed live gaps.
 
 Keep the private-friends audience, existing Supabase production database,
-manual schema administration, member permissions, and delete-and-recreate
+Flyway migration administration, member permissions, and delete-and-recreate
 expense correction policy. Use explicitly disposable local PostgreSQL fixtures
 for tests, separate from the persistent local demo and hosted databases.
 Selecting a database profile must not disable production runtime safeguards.
@@ -130,8 +130,8 @@ Total: 100 points, including the 30-point repository review follow-up and the
 
 ## Exit Criteria
 
-- Tasks 22–32 pass their acceptance criteria. A real reference-schema database
-  passes compatibility checks, representative drift still fails, browser
+- Tasks 22–32 pass their acceptance criteria. A PostgreSQL database migrated by
+  Flyway passes compatibility checks, representative drift still fails, browser
   failures remain safely diagnosable, and the completed browser/manual review
   is recorded without claiming unavailable checks passed.
 
@@ -141,8 +141,8 @@ Total: 100 points, including the 30-point repository review follow-up and the
 - Keyboard navigation, focus behavior, labels, status/error announcements,
   contrast, and responsive layouts meet the documented release baseline.
 - The deterministic end-to-end suite uses an explicitly configured isolated
-  database matching the expected schema and never uses the application
-  database implicitly.
+  database initialized by Flyway and never uses the application database
+  implicitly.
 - The suite covers the critical journey, cross-group denial, expired invites,
   recovery paths, and destructive confirmations in repeated and shuffled runs.
 - Backend tests, frontend tests, frontend lint, frontend build, and end-to-end

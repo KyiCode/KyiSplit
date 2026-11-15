@@ -30,9 +30,9 @@
 ## Implementation
 
 - Never commit secrets.
-- Database schema changes are applied manually outside this repository. Keep
-  [`roadmap/schema-reference.sql`](roadmap/schema-reference.sql) aligned with
-  the schema the application expects; it is a reference, not a migration.
+- Database schema changes are versioned in `backend/db/migrations` and applied
+  with Flyway. Never edit an applied migration or run Flyway automatically from
+  application startup. Use a new migration for each schema change.
 - Use TDD for behavioral changes: write a failing test, implement the smallest
   fix, then refactor.
 - Keep frontend and backend API contracts aligned.

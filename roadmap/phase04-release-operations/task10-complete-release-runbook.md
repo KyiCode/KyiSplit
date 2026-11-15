@@ -18,7 +18,7 @@ administration, recovery, and private-user onboarding.
   rollback, and evidence recording.
 - Manual schema administration includes backup, comparison, transactional
   application where possible, compatibility verification, and recovery steps;
-  the schema reference remains clearly non-migratory.
+  Flyway migrations are versioned, immutable, and applied before deployment.
 - Operational procedures link to monitoring, alert, secret rotation, backup,
   restore, and incident instructions with named ownership roles.
 - Private-user onboarding covers invitation delivery, supported workflow,

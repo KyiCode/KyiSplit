@@ -85,7 +85,7 @@ describe('E2E PostgreSQL guardrails', () => {
             })
         }
         await expect(assertSchemaCompatibility(client as never)).rejects.toThrow(
-            /schema-reference\.sql:/
+            /Flyway baseline migration:/
         )
         expect(client.query).toHaveBeenCalledTimes(5)
     })

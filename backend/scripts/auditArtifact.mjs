@@ -19,7 +19,7 @@ for (const file of files) {
     unsafePathFound = true
   }
 
-  if (relativePath.startsWith('node_modules/')) continue
+  if (relativePath.startsWith('node_modules/') || relativePath.startsWith('flyway/')) continue
   const content = await fs.readFile(file, 'utf8')
   if (
     /correct horse battery staple|e2e-only-signing-key/i.test(content) ||

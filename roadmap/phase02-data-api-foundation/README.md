@@ -1,11 +1,9 @@
 # Phase 02 — Data and API Foundation
 
-> Historical plan: the migration system and its database test harness produced
-> during this completed phase were removed by developer decision on 2026-07-31.
-> Current database administration is manual, and
-> [`../schema-reference.sql`](../schema-reference.sql) documents the expected
-> target schema. Commands and migration artifacts named below are retained only
-> as a record of how Phase 02 was originally implemented.
+> Historical plan: the migration system created during this phase was removed
+> by developer decision on 2026-07-31 and restored in Phase 04 as Flyway
+> migrations. The original task records below describe the earlier migration
+> implementation; current schema changes use `backend/db/migrations`.
 
 ## Outcome
 
@@ -20,8 +18,8 @@ Phase 01 established the authorization, invitation, transaction, money-input,
 and cookie-session behavior needed before changing stored data. Repository
 inspection still found foundation risks:
 
-- The only schema description is a non-executable snapshot, with no applied
-  migration history or tested rollback path.
+- The migration system and its test harness were removed after this phase,
+  leaving no applied migration history or tested schema setup.
 - Existing columns remain nullable or weakly constrained even when the API now
   depends on stricter invariants.
 - Backend response shapes and frontend TypeScript interfaces are maintained
@@ -66,12 +64,11 @@ inspection still found foundation risks:
 
 ## Legacy Upgrade Policy
 
-- [`../schema-reference.sql`](../schema-reference.sql) remains context only and
-  is never executed as a migration.
-- A legacy database may adopt the baseline only after a read-only preflight
-  matches the expected Phase 01 tables, columns, keys, and required data
-  conditions. Adoption records the baseline version; it does not silently
-  recreate or reinterpret existing objects.
+- The historical target-state schema was context only. Current database
+  changes are executed by Flyway from `backend/db/migrations`.
+- The current Flyway V1 migration creates a fresh application schema. Existing
+  databases must be inspected before migration; automatic baseline adoption is
+  not enabled.
 - Existing groups receive `SGD` before the group-currency column becomes
   non-null. After the browser and API cut over, new groups must supply their
   chosen currency and the temporary database default is removed.
@@ -105,8 +102,7 @@ inspection still found foundation risks:
 
 - Phase 01 is complete and its repository checks pass.
 - The product decisions in [`../README.md`](../README.md).
-- The Phase 01 schema context in
-  [`../schema-reference.sql`](../schema-reference.sql).
+- The Phase 01 schema context in the current Flyway migrations.
 - Task 01 requires an interactive browser and a non-production database.
 - Migration integration tests provision an isolated embedded PostgreSQL
   instance and never connect to the application's `DATABASE_URL`.

@@ -21,7 +21,7 @@ async function main() {
         process.stdout.write("Schema compatibility check passed.\n")
     } catch (error) {
         const message = error instanceof Error && error.message.startsWith(
-            "Database schema does not match roadmap/schema-reference.sql:"
+            "Database schema does not match the Flyway baseline migration:"
         )
             ? error.message
             : "Schema compatibility check failed; verify the explicit database target and its access."

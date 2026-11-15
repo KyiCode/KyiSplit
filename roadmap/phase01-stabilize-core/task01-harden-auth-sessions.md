@@ -5,6 +5,9 @@
 - Status: Done
 - Dependencies: None
 
+> Historical acceptance criteria use email-based identity. The current
+> application uses usernames; see the current Flyway migration and API code.
+
 ## Goal
 
 Make the custom JWT-cookie flow the sole browser session boundary, with

@@ -13,7 +13,7 @@ before promoting the private release.
 ## Acceptance Criteria
 
 - The production-like database is backed up and verified compatible with
-  `roadmap/schema-reference.sql` before application smoke tests.
+  the checked-in Flyway migrations before application smoke tests.
 - HTTPS and same-origin checks cover a direct browser route, static asset,
   authenticated API, unknown API route, secure cookie behavior, and health
   endpoints.

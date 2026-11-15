@@ -13,8 +13,11 @@ export function buildProfileEnvironment(
     processEnvironment = process.env,
     directory = process.cwd()
 ) {
-    if (!['local', 'prod'].includes(profile) || !['dev', 'start'].includes(mode)) {
-        throw new Error('Expected local or prod profile and dev or start mode')
+    if (
+        !['local', 'prod'].includes(profile) ||
+        !['dev', 'start', 'info', 'migrate', 'validate'].includes(mode)
+    ) {
+        throw new Error('Expected local or prod profile and a supported command')
     }
     const readEnv = file => {
         const envPath = path.join(directory, file)
@@ -29,7 +32,45 @@ export function buildProfileEnvironment(
         environment.NODE_ENV = 'development'
     }
     environment.DB_PROFILE = profile
+    if (['info', 'migrate', 'validate'].includes(mode)) {
+        validateFlywayTarget(profile, environment)
+    }
     return environment
+}
+
+export function validateFlywayTarget(profile, environment) {
+    const rawUrl = environment.FLYWAY_URL?.trim()
+    if (!rawUrl?.startsWith('jdbc:postgresql://')) {
+        throw new Error('FLYWAY_URL must be a JDBC PostgreSQL URL')
+    }
+    let url
+    try {
+        url = new URL(rawUrl.slice('jdbc:'.length))
+    } catch {
+        throw new Error('FLYWAY_URL must be a JDBC PostgreSQL URL')
+    }
+    if (
+        url.protocol !== 'postgresql:' ||
+        !url.hostname ||
+        url.pathname.length <= 1 ||
+        url.username ||
+        url.password ||
+        url.hash
+    ) {
+        throw new Error('FLYWAY_URL must be a credential-free JDBC PostgreSQL URL')
+    }
+
+    const hostname = url.hostname.toLowerCase()
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(hostname)
+    if (profile === 'local' && !local) {
+        throw new Error('Local Flyway commands require a loopback database target')
+    }
+    if (profile === 'prod' && (local || !hostname.includes('supabase'))) {
+        throw new Error('Production Flyway commands require a hosted Supabase target')
+    }
+    if (profile === 'prod' && !environment.FLYWAY_PASSWORD?.trim()) {
+        throw new Error('FLYWAY_PASSWORD must be configured for production migrations')
+    }
 }
 
 export function forwardShutdownSignals(child, signalSource = process) {
@@ -42,12 +83,19 @@ function main() {
     const [profile, mode] = process.argv.slice(2)
     const environment = buildProfileEnvironment(profile, mode)
     const require = createRequire(import.meta.url)
-    const args = mode === 'dev'
-        ? [require.resolve('tsx/cli'), 'watch', 'src/server.ts']
-        : ['dist/server.js']
-    const child = spawn(process.execPath, args, {
+    const flywayCommand = ['info', 'migrate', 'validate'].includes(mode)
+    const executable = flywayCommand
+        ? (process.platform === 'win32' ? 'flyway.cmd' : 'flyway')
+        : process.execPath
+    const args = flywayCommand
+        ? ['-configFiles=flyway.conf', mode]
+        : mode === 'dev'
+            ? [require.resolve('tsx/cli'), 'watch', 'src/server.ts']
+            : ['dist/server.js']
+    const child = spawn(executable, args, {
         cwd: process.cwd(),
         env: environment,
+        shell: flywayCommand && process.platform === 'win32',
         stdio: 'inherit',
         windowsHide: true
     })

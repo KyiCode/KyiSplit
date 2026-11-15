@@ -17,7 +17,7 @@ Read-only schema compatibility logic, an explicit CLI entry point, and backend t
 
 - Inspect required columns, data types or domains, nullability, keys, checks, foreign keys and delete behavior, and required trigger/function definitions using PostgreSQL metadata.
 - Include money scale and positivity, participant/group references, expense total conservation, mandatory FX snapshots, and FX immutability.
-- Require an explicit database target; never fall back to DATABASE_URL or apply schema-reference.sql.
+- Require an explicit database target; never fall back to DATABASE_URL or apply migrations during application startup.
 - Return a nonzero result with safe actionable mismatch descriptions without logging connection strings or row data.
 - Compare semantic properties rather than relying only on constraint or trigger names.
 - Cover matching metadata, missing columns, wrong types, removed constraints, disabled or altered triggers, and changed function bodies using controlled metadata fixtures.
@@ -36,7 +36,7 @@ npm.cmd --prefix backend test
 ## Completion
 
 - Added a read-only `schema:check` CLI that requires an explicit PostgreSQL URL
-  and never reads `DATABASE_URL` or applies the schema reference.
+  and never reads `DATABASE_URL` or applies migrations.
 - The checker compares PostgreSQL catalog metadata with the reference for
   columns, types, nullability, keys, checks, indexes, foreign-key targets and
   delete behavior, trigger behavior, and trigger-function bodies. Comparisons

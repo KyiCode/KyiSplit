@@ -17,6 +17,47 @@ afterEach(async () => {
 })
 
 describe("profile command runner", () => {
+    it("requires loopback targets for local Flyway commands", async () => {
+        const { validateFlywayTarget } = await import(
+            pathToFileURL(profileRunner).href
+        ) as { validateFlywayTarget: (profile: string, environment: NodeJS.ProcessEnv) => void }
+
+        expect(() => validateFlywayTarget("local", {
+            FLYWAY_URL: "jdbc:postgresql://127.0.0.1:55433/kyisplit_local"
+        })).not.toThrow()
+        expect(() => validateFlywayTarget("local", {
+            FLYWAY_URL: "jdbc:postgresql://db.example.com:5432/kyisplit"
+        })).toThrow("Local Flyway commands require a loopback database target")
+    })
+
+    it("requires hosted Supabase targets and separate credentials for production migrations", async () => {
+        const { validateFlywayTarget } = await import(
+            pathToFileURL(profileRunner).href
+        ) as { validateFlywayTarget: (profile: string, environment: NodeJS.ProcessEnv) => void }
+
+        expect(() => validateFlywayTarget("prod", {
+            FLYWAY_URL: "jdbc:postgresql://127.0.0.1:5432/app",
+            FLYWAY_PASSWORD: "safe-test-password"
+        })).toThrow("Production Flyway commands require a hosted Supabase target")
+        expect(() => validateFlywayTarget("prod", {
+            FLYWAY_URL: "jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require"
+        })).toThrow("FLYWAY_PASSWORD must be configured for production migrations")
+        expect(() => validateFlywayTarget("prod", {
+            FLYWAY_URL: "jdbc:postgresql://aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require",
+            FLYWAY_PASSWORD: "safe-test-password"
+        })).not.toThrow()
+    })
+
+    it("rejects credentials embedded in the Flyway JDBC URL", async () => {
+        const { validateFlywayTarget } = await import(
+            pathToFileURL(profileRunner).href
+        ) as { validateFlywayTarget: (profile: string, environment: NodeJS.ProcessEnv) => void }
+
+        expect(() => validateFlywayTarget("local", {
+            FLYWAY_URL: "jdbc:postgresql://user:secret@127.0.0.1:55433/kyisplit_local"
+        })).toThrow("FLYWAY_URL must be a credential-free JDBC PostgreSQL URL")
+    })
+
     it("forwards shutdown signals to the server process", async () => {
         const { forwardShutdownSignals } = await import(
             pathToFileURL(profileRunner).href

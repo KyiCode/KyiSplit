@@ -1,6 +1,5 @@
--- KyiSplit expected PostgreSQL schema.
--- This is a target-state reference for manual database administration.
--- It is not a migration or a safe incremental update for a populated database.
+-- Initial schema for a new KyiSplit database, managed by Flyway.
+-- This versioned migration is immutable after it has been applied.
 
 CREATE DOMAIN public.kyisplit_money AS numeric
     CHECK (

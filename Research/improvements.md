@@ -94,6 +94,6 @@ In-place editing, audit history, recovery, idempotency, and pagination are alrea
 
 ## Implementation handoff
 
-Start with the linked [current task](../roadmap/phase04-release-operations/CURRENT_TASK.md). For any later selected feature, use the planning guide to scope one task at a time with a failing behavioral test, the smallest implementation, and refactoring. Keep backend and frontend contracts aligned; update the expected schema reference if needed, while leaving actual schema changes to the database owner.
+Start with the linked [current task](../roadmap/phase04-release-operations/CURRENT_TASK.md). For any later selected feature, use the planning guide to scope one task at a time with a failing behavioral test, the smallest implementation, and refactoring. Keep backend and frontend contracts aligned; add a new immutable Flyway migration for each schema change.
 
 Use the repository and task-specific verification commands. Product checks should include a subset split, multiple payers, a saved cross-currency expense, a partial repayment, and recovery after a confirmed save followed by failed refresh. Never interpret unit tests as live database or browser release evidence.

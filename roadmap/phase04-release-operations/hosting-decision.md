@@ -29,6 +29,7 @@ staging checks pass.
 | Artifact source | Private GHCR image created from `release/kyisplit` by CI |
 | Artifact identity | Git commit release version plus immutable image digest; never `latest` |
 | Build command | CI runs locked installs, verification, `build:artifact`, and the image build; Render performs no source build |
+| Database migrations | Render's pre-deploy command runs `npm run db:migrate:release` against the service's injected Flyway JDBC credentials; migration failure blocks the deploy |
 | Start command | `node dist/server.js` from the packaged artifact working directory |
 | Port | Render-provided `PORT`; Express binds the service listener |
 | Health | Task 06 adds `/health/live` and `/health/ready`; Render deploy health gate uses `/health/ready` |
@@ -39,8 +40,9 @@ staging checks pass.
 | Logs | Structured stdout/stderr in Render; Task 09 configures retention and external transport |
 
 The environments use the same image and configuration names but distinct
-service URLs, `DATABASE_URL`, `JWT_KEY`, `SIGNUP_TOKEN`, and release authority.
-No environment uses a separate source branch.
+service URLs, `DATABASE_URL`, `FLYWAY_URL`, `FLYWAY_USER`, `FLYWAY_PASSWORD`,
+`JWT_KEY`, `SIGNUP_TOKEN`, and release authority. No environment uses a
+separate source branch.
 
 ## Cost Boundary
 

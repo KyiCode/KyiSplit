@@ -15,7 +15,7 @@ data and production-like frontend/backend builds.
 - Playwright is configured with a non-interactive `test:e2e` command, bounded
   retries/timeouts, trace-on-failure, and deterministic browser selection.
 - E2E setup uses an explicitly configured isolated PostgreSQL instance that the
-  developer has prepared to match `roadmap/schema-reference.sql`; it never
+  developer has prepared by applying the Flyway migrations; it never
   applies schema changes or uses `DATABASE_URL` implicitly.
 - Backend and frontend test servers use explicit test-only ports and
   configuration and are stopped after the suite.

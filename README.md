@@ -21,6 +21,7 @@ roadmap targets a single HTTPS origin for the browser application and API.
 
 - Node.js `^20.19.0` or `>=22.12.0`
 - npm
+- Flyway Command-line 13.11.1
 - Access to a compatible PostgreSQL database
 
 Install the locked dependencies from the repository root:
@@ -38,6 +39,8 @@ directories. Configure these variables before starting the application:
 | Project | Variable | Purpose |
 | --- | --- | --- |
 | Backend | `DATABASE_URL` | PostgreSQL connection string |
+| Migration runner | `FLYWAY_URL` | JDBC PostgreSQL URL for schema migrations |
+| Migration runner | `FLYWAY_USER` / `FLYWAY_PASSWORD` | Database role credentials for Flyway |
 | Backend | `JWT_KEY` | Secret used to sign session tokens |
 | Backend | `SIGNUP_TOKEN` | Private token required to create an account |
 | Backend | `BCRYPT_SALT` | Password-hashing cost |
@@ -64,18 +67,39 @@ never configured in the frontend build. Usernames are 3–32 characters using
 lowercase letters, numbers, underscores, and hyphens; they are normalized to
 lowercase.
 
-## Database Schema
+## Database Migrations
 
-KyiSplit does not include or run database migrations. Database changes are
-performed manually by the database owner, and application startup never
-creates or alters schema objects.
+Flyway migrations in [`backend/db/migrations`](backend/db/migrations) are the
+source of truth for PostgreSQL schema changes. `V1__create_current_schema.sql`
+creates the current username-based schema on a fresh database. Applied
+migrations are immutable; add a new version for later changes. Application
+startup never applies migrations.
 
-The consolidated schema the application expects is documented in
-[`roadmap/schema-reference.sql`](roadmap/schema-reference.sql). Treat that file
-as a target-state reference, not as an incremental or production-safe update
-script. Before changing a populated database, take a backup, compare its
-current schema and data with the reference, and apply the required changes
-manually in an appropriate transaction.
+Install [Flyway Command-line 13.11.1](https://documentation.red-gate.com/flyway/reference/usage/command-line) and configure `FLYWAY_URL`, `FLYWAY_USER`,
+and `FLYWAY_PASSWORD` for the target database. `FLYWAY_URL` must use JDBC form,
+such as `jdbc:postgresql://host:5432/database?sslmode=require`. Never commit
+these credentials. For hosted deployments, use a direct or session-mode
+PostgreSQL connection suitable for migration locks; do not use transaction
+pooling.
+
+Check pending migrations, then apply them:
+
+```powershell
+npm.cmd --prefix backend run db:info:prod
+npm.cmd --prefix backend run db:migrate:prod
+npm.cmd --prefix backend run db:validate:prod
+```
+
+These profile commands load the ignored `backend/.env` and
+`backend/.env.prod` files, then require a hosted Supabase target. Use the
+corresponding `:local` commands for a loopback database. Render's pre-deploy
+command uses the packaged CLI and runtime-injected `FLYWAY_*` values.
+
+`migrate` runs each migration transactionally and records its version and
+checksum in Flyway's schema history. A fresh database must not be baselined;
+Flyway should apply V1. For a database with existing application tables, inspect
+it before using `baseline` or `migrate` so Flyway does not adopt an unrelated or
+partially initialized schema.
 
 ## Run Locally
 
@@ -104,7 +128,7 @@ Copy `backend/.env.local.example` or `backend/.env.prod.example` to the correspo
 
 `DB_PROFILE` chooses the database independently of `NODE_ENV`, which controls production runtime validation, HTTPS origin requirements, and secure cookies. Existing `dev`/`start` commands and isolated E2E tests retain their explicit `DATABASE_URL` behavior when no profile is selected. Production artifacts can select a profile by injecting `DB_PROFILE=prod`; do not package local environment files.
 
-Database provisioning remains manual. Install PostgreSQL command-line tools and run these PowerShell commands from the repository root for a **new local review database only**. If the PostgreSQL tools are not on `PATH`, first point it at your PostgreSQL `bin` directory:
+Create a **new local review database** and apply the checked-in migrations. Install PostgreSQL command-line tools and run these PowerShell commands from the repository root. If the PostgreSQL tools are not on `PATH`, first point it at your PostgreSQL `bin` directory:
 
 ```powershell
 $env:Path = "C:\Program Files\PostgreSQL\17\bin;$env:Path"
@@ -115,10 +139,12 @@ New-Item -ItemType Directory -Force .e2e | Out-Null
 initdb -D .e2e/local-postgres -U kyisplit_local --auth-local=trust --auth-host=trust --encoding=UTF8
 pg_ctl -D .e2e/local-postgres -l .e2e/local-postgres/server.log -o "-p 55433 -h 127.0.0.1" -w start
 createdb -h 127.0.0.1 -p 55433 -U kyisplit_local kyisplit_local
-psql -h 127.0.0.1 -p 55433 -U kyisplit_local -d kyisplit_local -v ON_ERROR_STOP=1 --single-transaction -f roadmap/schema-reference.sql
+$env:FLYWAY_URL = "jdbc:postgresql://127.0.0.1:55433/kyisplit_local"
+$env:FLYWAY_USER = "kyisplit_local"
+npm.cmd --prefix backend run db:migrate:local
 ```
 
-Copy `backend/.env.local.example` to the ignored `backend/.env.local`, then use `npm.cmd --prefix backend run dev:local`. Create any demo accounts and expenses through the app. Stop this review database with `pg_ctl -D .e2e/local-postgres -m fast -w stop`. The local cluster listens on loopback only and uses trust authentication for this isolated development instance; do not reuse this setup for a network-accessible database. Never apply the target-state schema file to a populated database as an incremental migration. Run the read-only schema check against an explicitly selected disposable database. Local data and PostgreSQL clusters belong under ignored `.e2e/`.
+Copy `backend/.env.local.example` to the ignored `backend/.env.local`, then use `npm.cmd --prefix backend run dev:local`. Create any demo accounts and expenses through the app. Stop this review database with `pg_ctl -D .e2e/local-postgres -m fast -w stop`. The local cluster listens on loopback only and uses trust authentication for this isolated development instance; do not reuse this setup for a network-accessible database. Local data and PostgreSQL clusters belong under ignored `.e2e/`.
 
 ## Build the Production Artifact
 
@@ -126,13 +152,15 @@ Set an explicit release identifier, then run the locked artifact build:
 
 ```powershell
 $env:RELEASE_VERSION="local-2026-08-04"
+$env:FLYWAY_HOME="C:\tools\flyway-13.11.1"
 npm.cmd --prefix backend run build:artifact
 ```
 
-The command compiles the backend and frontend, assembles them under
-`release/kyisplit`, writes `release.json`, and installs only backend production
-dependencies with `npm ci --omit=dev`. The generated directory is ignored by
-Git and is the complete provider-neutral deployment artifact.
+Set `FLYWAY_HOME` to the pinned Flyway Command-line directory before building.
+The command compiles the backend and frontend, assembles them with the versioned
+migrations and Flyway CLI under `release/kyisplit`, writes `release.json`, and
+installs only backend production dependencies with `npm ci --omit=dev`. The
+generated directory is ignored by Git and is the complete deployment artifact.
 
 With production configuration injected by the runtime, start it from the
 artifact directory:
@@ -234,15 +262,15 @@ explicitly:
 npm.cmd --prefix backend run schema:check -- --database-url postgresql://user@localhost/kyisplit_test
 ```
 
-The checker reads PostgreSQL catalog metadata and compares it with
-`roadmap/schema-reference.sql`. It does not fall back to `DATABASE_URL`.
+The checker reads PostgreSQL catalog metadata and compares it with the V1
+Flyway baseline. It does not fall back to `DATABASE_URL`.
 
 ### Isolated end-to-end verification
 
 The Playwright suite never falls back to the application database. It copies a
-stopped local PostgreSQL template whose schema matches
-`roadmap/schema-reference.sql`, runs the copy on a test-only port, and deletes
-the entire run directory afterward.
+stopped local PostgreSQL template initialized by Flyway from the versioned
+migrations, runs the copy on a test-only port, and deletes the entire run
+directory afterward.
 
 Browser screenshots, traces, and video are disabled, and Playwright failure
 output suppresses raw browser errors and URLs. See the
@@ -276,19 +304,21 @@ serves its frontend and API together on test-only port 5510, runs PostgreSQL on
 port 55432, and uses a local deterministic FX provider on port 5512. Playwright stops the
 services and removes the complete run directory after the suite, including
 after test failures. It never deletes rows from a shared application database
-and never applies `schema-reference.sql` during test startup.
+and never runs migrations against the template or application database during
+test startup.
 
 ## Repository Layout
 
 ```text
-backend/   Express API, PostgreSQL access, and backend tests
+backend/   Express API, Flyway migrations, PostgreSQL access, and backend tests
 frontend/  React browser application
-roadmap/   Release decisions, phased plans, and schema context
+roadmap/   Release decisions and phased plans
 ```
 
 ## Current Limitations
 
 - The application is pre-release and intended only for development.
-- End-to-end verification requires a separately prepared PostgreSQL template.
+- End-to-end verification requires a separately prepared PostgreSQL template
+  initialized with Flyway.
 - Managed hosting, continuous delivery, and production operations remain
   roadmap work.

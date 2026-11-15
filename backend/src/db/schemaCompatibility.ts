@@ -297,7 +297,7 @@ export function findSchemaCompatibilityIssues(
             normalizeFunctionBody(actual.body) !== normalizeFunctionBody(required.body)
         ) {
             issues.push(
-                `Function ${key} differs from its schema-reference definition.`
+                `Function ${key} differs from the Flyway baseline definition.`
             )
         }
     }
@@ -307,14 +307,14 @@ export function findSchemaCompatibilityIssues(
 
 export async function assertSchemaCompatibility(
     client: Queryable,
-    schemaSql = readSchemaReference()
+    schemaSql = readFlywayBaseline()
 ) {
     const requirements = readSchemaRequirements(schemaSql)
     const metadata = await readSchemaMetadata(client)
     const issues = findSchemaCompatibilityIssues(requirements, metadata)
     if (issues.length > 0) {
         throw new Error(
-            `Database schema does not match roadmap/schema-reference.sql:\n${issues.map(issue => `- ${issue}`).join("\n")}`
+            `Database schema does not match the Flyway baseline migration:\n${issues.map(issue => `- ${issue}`).join("\n")}`
         )
     }
 }
@@ -527,9 +527,9 @@ async function readSchemaMetadata(client: Queryable): Promise<SchemaMetadata> {
     }
 }
 
-function readSchemaReference() {
+function readFlywayBaseline() {
     return readFileSync(
-        path.resolve(__dirname, "../../../roadmap/schema-reference.sql"),
+        path.resolve(__dirname, "../../db/migrations/V1__create_current_schema.sql"),
         "utf8"
     )
 }
@@ -953,7 +953,7 @@ function readParenthesized(value: string, openIndex: number) {
             }
         }
     }
-    throw new Error("Unbalanced parentheses in schema reference.")
+    throw new Error("Unbalanced parentheses in Flyway migration SQL.")
 }
 
 function splitTopLevel(value: string) {

@@ -5,6 +5,9 @@
 - Status: Done
 - Dependencies: Task 03
 
+> Historical acceptance criteria mention account email fields. The current
+> application uses usernames; see the current Flyway migration and API code.
+
 ## Goal
 
 Move the Phase 01 account, group, membership, and reusable-invitation invariants

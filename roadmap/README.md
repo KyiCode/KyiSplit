@@ -34,8 +34,8 @@ As inspected on 2026-07-29:
 
 - Audience: a trusted, private group of friends.
 - Database: existing Supabase PostgreSQL.
-- Schema administration: the database owner applies changes manually; the
-  repository carries an expected-schema reference but no migrations.
+- Schema administration: immutable, versioned Flyway migrations are the source
+  of truth; application startup never applies migrations.
 - Authentication: retain and harden the custom Express JWT-cookie flow.
 - Deployment: serve the React application and API from one HTTPS origin.
 - Existing group currency: backfill to SGD; new groups choose a default
@@ -85,8 +85,8 @@ pass.
 
 Make stored data and backend contracts authoritative:
 
-- Establish the required database constraints and document the expected schema
-  for the existing Supabase database.
+- Establish the required database constraints through versioned migrations
+  and verify migrated schemas against PostgreSQL.
 - Run the carried-forward interactive browser regression for authentication,
   invitation continuation and reuse, cross-group denial, expense creation, and
   recovery states before changing the Phase 01 contracts.
@@ -101,7 +101,8 @@ Make stored data and backend contracts authoritative:
   change merely because a live rate changes.
 - Calculate balances and settlement suggestions with deterministic decimal
   and rounding rules, including persisted repayments.
-- Verify database behavior against a database that matches the expected schema.
+- Verify database behavior by applying the migrations to an explicitly
+  configured isolated PostgreSQL database.
 
 Exit gate: API contract tests and the carried-forward browser regression pass,
 the expected database constraints are documented, and repeated balance
@@ -147,9 +148,10 @@ Package, deploy, and operate the private release:
   limits, authentication abuse controls, log transport and retention,
   health/readiness checks, monitoring, alerting, backup expectations, incident
   response, and rollback.
-- Deploy to a production-like environment, verify the manually managed schema
-  and run same-origin smoke checks, then promote the identical artifact.
-- Document setup, deployment, manual schema changes, recovery, and private-user
+- Deploy to a production-like environment, apply Flyway migrations before the
+  service starts, and run same-origin smoke checks before promoting the
+  identical artifact.
+- Document setup, deployment, Flyway migrations, recovery, and private-user
   onboarding.
 
 Exit gate: the production URL is HTTPS and same-origin, automated and manual

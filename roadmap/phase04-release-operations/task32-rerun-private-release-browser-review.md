@@ -12,6 +12,7 @@ Close the review's browser, visual, and accessibility evidence gaps before resum
 ## Acceptance Criteria
 
 - Run the complete isolated Chromium journey, including signup/invite continuation, cross-group denial, multi-payer FX expense, detail breakdown, repayment, and explicit deletion.
+- Apply the Flyway baseline to an explicitly configured empty disposable PostgreSQL database and validate the recorded migration before the browser journey.
 - Cover failed-refresh recovery, local-date defaults, stale balance notices, ordered activity, and keyboard confirmations; keep controlled negative runs distinct from the final passing suite.
 - Check supported desktop and narrow mobile layouts, zoom, long names/amounts, focus visibility, announcements, contrast, empty/loading/error/offline states, and clipboard failure.
 - Record sanitized outcomes and unresolved blockers. If browser control is unavailable, do not claim manual visual/assistive-technology checks passed.

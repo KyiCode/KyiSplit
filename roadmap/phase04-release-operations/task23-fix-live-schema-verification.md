@@ -32,7 +32,7 @@ Backend tests; schema:check against the explicit disposable reference database p
 
 ## Completion
 
-- Captured PostgreSQL 17 catalog rows in `backend/test/fixtures/postgres17-schema-reference-catalog.json` and added regressions for catalog arrays, ordered keys, check normalization, expression indexes, trigger semantics, and sequential client queries.
+- Updated PostgreSQL 17 catalog rows in `backend/test/fixtures/postgres17-flyway-baseline-catalog.json` and retained regressions for catalog arrays, ordered keys, check normalization, expression indexes, trigger semantics, and sequential client queries.
 - Backend tests passed: 257 tests across 27 files; backend build passed.
 - `schema:check` accepted the reference schema on a named disposable PostgreSQL database and rejected separate disposable copies with constraint, index, and trigger drift.
 - The packaged E2E smoke server reached `/health/ready` using an isolated copy of the E2E template; its run database was stopped and removed during shutdown.

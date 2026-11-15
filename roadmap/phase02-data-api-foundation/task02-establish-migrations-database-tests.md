@@ -22,7 +22,7 @@ development migrations, and run in isolated PostgreSQL integration tests.
   applied version nor an incorrect history row after failure.
 - The executable baseline creates the Phase 01 tables, keys, indexes, defaults,
   and extensions from an empty database without executing
-  `roadmap/schema-reference.sql`.
+  `backend/db/migrations/V1__create_current_schema.sql`.
 - A read-only legacy preflight compares the real schema with the expected
   Phase 01 shape and reports missing, extra, or incompatible objects before
   adoption.

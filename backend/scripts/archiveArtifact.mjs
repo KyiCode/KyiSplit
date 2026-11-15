@@ -45,6 +45,9 @@ for (const requiredEntry of [
   'kyisplit/release.json',
   'kyisplit/dist/server.js',
   'kyisplit/public/index.html',
+  'kyisplit/flyway.conf',
+  'kyisplit/db/migrations/V1__create_current_schema.sql',
+  `kyisplit/flyway/${process.platform === 'win32' ? 'flyway.cmd' : 'flyway'}`,
   'kyisplit/node_modules/express/package.json',
 ]) {
   if (!entries.includes(requiredEntry)) {

@@ -16,6 +16,12 @@ reviewable production-like configuration.
   artifact produced by CI rather than rebuilding unverified source.
 - Runtime secrets and database configuration are injected by the platform and
   no secret values are committed or printed.
+- Render runs `npm run db:migrate:release` as a
+  pre-deploy step against that environment's injected Flyway JDBC credentials;
+  migration failure blocks the deploy, and the app itself never migrates at
+  startup.
+- The deployed artifact contains the pinned Flyway CLI, configuration, and
+  versioned migration files required by the pre-deploy command.
 - HTTPS, one-origin routing, runtime version, region, start command, liveness,
   readiness, and deployment timeout are explicit.
 - Production-like and production use the same artifact and configuration shape

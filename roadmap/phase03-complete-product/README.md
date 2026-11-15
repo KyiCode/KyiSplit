@@ -67,7 +67,7 @@ only the original partial experience:
 
 - Phase 02 is complete and its automated checks pass.
 - The developer-supplied Phase 02 browser regression is recorded.
-- The shared API contract, expected schema reference, deterministic balance
+- The shared API contract, Flyway migration history, deterministic balance
   response, and repayment routes from Phase 02 remain authoritative. The
   database owner applies schema changes manually.
 

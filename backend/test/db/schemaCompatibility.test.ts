@@ -9,13 +9,13 @@ import {
     type SchemaMetadata
 } from "../../src/db/schemaCompatibility"
 
-const referenceSql = readFileSync(
-    path.resolve(__dirname, "../../../roadmap/schema-reference.sql"),
+const baselineSql = readFileSync(
+    path.resolve(__dirname, "../../db/migrations/V1__create_current_schema.sql"),
     "utf8"
 )
-const requirements = readSchemaRequirements(referenceSql)
+const requirements = readSchemaRequirements(baselineSql)
 const catalogFixture = JSON.parse(readFileSync(
-    path.resolve(__dirname, "../fixtures/postgres17-schema-reference-catalog.json"),
+    path.resolve(__dirname, "../fixtures/postgres17-flyway-baseline-catalog.json"),
     "utf8"
 )) as Record<string, unknown[]>
 
@@ -54,7 +54,18 @@ function matchingMetadata(): SchemaMetadata {
 }
 
 describe("schema compatibility metadata", () => {
-    it("reads the invariants from the schema reference", () => {
+    it("uses the current username schema in the Flyway baseline", () => {
+        expect(requirements.columns).toContainEqual(expect.objectContaining({
+            tableName: "users",
+            columnName: "username"
+        }))
+        expect(requirements.columns).not.toContainEqual(expect.objectContaining({
+            tableName: "users",
+            columnName: "email"
+        }))
+    })
+
+    it("reads the invariants from the Flyway baseline", () => {
         expect(requirements.columns).toContainEqual({
             tableName: "expenses",
             columnName: "total",
@@ -83,7 +94,7 @@ describe("schema compatibility metadata", () => {
         ])
     })
 
-    it("accepts metadata matching the schema reference", () => {
+    it("accepts metadata matching the Flyway baseline", () => {
         expect(findSchemaCompatibilityIssues(
             requirements,
             matchingMetadata()
@@ -201,9 +212,8 @@ describe("schema compatibility metadata", () => {
             index.tableName !== "repayments"
         ))
 
-        expect(findSchemaCompatibilityIssues(requirements, metadata)).toContain(
-            "Missing index on public.repayments for group_id, repayment_date DESC, created_at DESC, id DESC."
-        )
+        expect(findSchemaCompatibilityIssues(requirements, metadata).join("\n"))
+            .toMatch(/Missing index on public\.repayments for group_id,\s+repayment_date DESC,\s+created_at DESC,\s+id DESC\./)
     })
 
     it("reports missing participant references and changed delete behavior", () => {
@@ -259,7 +269,7 @@ describe("schema compatibility metadata", () => {
         )
 
         expect(findSchemaCompatibilityIssues(requirements, metadata)).toContain(
-            "Function public.kyisplit_assert_expense_balanced differs from its schema-reference definition."
+            "Function public.kyisplit_assert_expense_balanced differs from the Flyway baseline definition."
         )
     })
 })
@@ -281,10 +291,10 @@ describe("explicit schema-check target", () => {
 })
 
 describe("PostgreSQL catalog compatibility", () => {
-    it("accepts catalog rows captured from PostgreSQL 17 after applying the reference", async () => {
+    it("accepts catalog rows captured from PostgreSQL 17 after applying the baseline migration", async () => {
         await expect(assertSchemaCompatibility(
             createCatalogClient(),
-            referenceSql
+            baselineSql
         )).resolves.toBeUndefined()
     })
 
@@ -300,27 +310,27 @@ describe("PostgreSQL catalog compatibility", () => {
 
         await expect(assertSchemaCompatibility(
             createCatalogClient(rows),
-            referenceSql
+            baselineSql
         )).rejects.toThrow(
             "Foreign key on public.payments (group_id, user_id) must reference public.group_members (group_id, user_id) with ON DELETE RESTRICT."
         )
     })
 
-    it("normalizes expression-index casts but rejects a changed index expression", async () => {
+    it("normalizes index-expression casts but rejects a changed index expression", async () => {
         const rows = structuredClone(catalogFixture)
-        const userIndex = rows.indexes.find(row => (
-            (row as Record<string, unknown>).table_name === "users"
+        const repaymentIndex = rows.indexes.find(row => (
+            (row as Record<string, unknown>).table_name === "repayments"
         )) as Record<string, unknown>
-        userIndex.definition = String(userIndex.definition).replace(
-            "lower((email)::text)",
-            "upper((email)::text)"
+        repaymentIndex.definition = String(repaymentIndex.definition).replace(
+            "group_id, repayment_date DESC",
+            "upper((group_id)::text), repayment_date DESC"
         )
 
         await expect(assertSchemaCompatibility(
             createCatalogClient(rows),
-            referenceSql
+            baselineSql
         )).rejects.toThrow(
-            "Missing unique index on public.users for lower(email)."
+            /Missing index on public\.repayments for group_id,\s+repayment_date DESC,\s+created_at DESC,\s+id DESC\./
         )
     })
 
@@ -336,7 +346,7 @@ describe("PostgreSQL catalog compatibility", () => {
 
         await expect(assertSchemaCompatibility(
             createCatalogClient(rows),
-            referenceSql
+            baselineSql
         )).rejects.toThrow(
             /Missing index on public\.repayments for group_id,\s+repayment_date DESC,\s+created_at DESC,\s+id DESC\./
         )
@@ -353,7 +363,7 @@ describe("PostgreSQL catalog compatibility", () => {
 
         await expect(assertSchemaCompatibility(
             createCatalogClient(rows),
-            referenceSql
+            baselineSql
         )).rejects.toThrow(
             "Missing BEFORE UPDATE OR DELETE row trigger on public.expense_fx_snapshots for kyisplit_protect_expense_fx."
         )
@@ -372,8 +382,8 @@ describe("PostgreSQL catalog compatibility", () => {
             }
         }
 
-        await expect(assertSchemaCompatibility(client, referenceSql)).rejects.toThrow(
-            "Database schema does not match roadmap/schema-reference.sql:"
+        await expect(assertSchemaCompatibility(client, baselineSql)).rejects.toThrow(
+            "Database schema does not match the Flyway baseline migration:"
         )
         expect(maximumActiveQueries).toBe(1)
     })
