@@ -147,7 +147,7 @@ describe("user controller", () => {
         await signup(
             createRequest({
                 username: "person_name",
-                password: "short",
+                password: "abc",
                 token: "signup-secret"
             }),
             response
@@ -159,6 +159,7 @@ describe("user controller", () => {
     })
 
     it.each([
+        ["four characters", "abcd"],
         ["72 ASCII bytes", "a".repeat(72)],
         ["18 four-byte characters", "😀".repeat(18)]
     ])("accepts a signup password at the bcrypt byte limit: %s", async (_name, password) => {

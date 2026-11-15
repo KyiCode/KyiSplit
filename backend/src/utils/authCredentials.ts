@@ -4,7 +4,7 @@ import { MAX_SIGNUP_PASSWORD_BYTES } from "../contracts/api"
 const USERNAME_PATTERN = /^[a-z0-9_-]+$/
 const MIN_USERNAME_LENGTH = 3
 const MAX_USERNAME_LENGTH = 32
-const MIN_PASSWORD_LENGTH = 8
+const MIN_PASSWORD_LENGTH = 4
 const MAX_PASSWORD_LENGTH = 128
 
 export interface Credentials {

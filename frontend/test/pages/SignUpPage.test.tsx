@@ -26,6 +26,7 @@ async function completeSignup(user: ReturnType<typeof userEvent.setup>) {
 }
 
 test.each([
+  ['accepts a four-character password', 'abcd', false],
   ['accepts 72 ASCII bytes', 'a'.repeat(72), false],
   ['rejects 73 ASCII bytes', 'a'.repeat(73), true],
   ['accepts 72 bytes of multibyte text', '😀'.repeat(18), false],
@@ -44,10 +45,11 @@ test.each([
     target: { value: password },
   })
 
-  expect(screen.getByText(/at most 72 UTF-8 bytes/i)).toBeInTheDocument()
+  expect(screen.getByText('Use at least 4 characters.')).toBeInTheDocument()
   const button = screen.getByRole('button', { name: 'Create account' })
   if (rejected) {
     expect(button).toBeDisabled()
+    expect(screen.getByRole('alert')).toHaveTextContent('Password is too long.')
     await user.click(button)
     expect(fetchMock).not.toHaveBeenCalled()
   } else {

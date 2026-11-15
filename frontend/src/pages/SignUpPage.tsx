@@ -71,17 +71,16 @@ function SignUpPage() {
                     />
                 </label>
                 <p className="field-hint" id="signup-password-guidance">
-                    Use at least 8 characters and at most 72 UTF-8 bytes.
-                    Some characters use multiple bytes.
+                    Use at least 4 characters.
                 </p>
                 {!passwordWithinByteLimit && (
                     <p className="notice error small" id="signup-password-error" role="alert">
-                        Password exceeds the 72-byte limit.
+                        Password is too long.
                     </p>
                 )}
                 {errorMessage && <div className="notice error small" role="alert">{errorMessage}</div>}
                 {success && <div className="notice success small" role="status">Account created. Redirecting…</div>}
-                <button className="button primary full" disabled={username.trim().length < 3 || password.length < 8 || !passwordWithinByteLimit || !token || submitting || success}>
+                <button className="button primary full" disabled={username.trim().length < 3 || password.length < 4 || !passwordWithinByteLimit || !token || submitting || success}>
                     {submitting ? "Creating account…" : "Create account"}
                 </button>
                 <p className="auth-switch">Already registered? <Link to="/auth">Sign in</Link></p>
