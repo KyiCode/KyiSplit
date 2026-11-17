@@ -49,3 +49,15 @@ Full Phase 04 verification matrix, explicit disposable schema gate, repeated iso
 - A TDD regression exposed and fixed rejection of large decimal money values caused by floating-point tolerance. Browser journey fixes also wait for the asynchronous sign-in route change and follow the app's automatic navigation after group creation.
 - Negative runs used during diagnosis and the parser regression were separate from the final passing E2E runs.
 - Manual visual review remains unresolved: the computer-control inventory returned no browsers, and opening Chrome was unavailable. Desktop/zoom/contrast review and screen-reader review have not been performed and are not claimed as passed. Keep Task 32 active and do not resume Task 07 until those checks can be completed or the release criteria are otherwise resolved.
+
+## Review Attempt — 2026-11-17
+
+- Two attempts to obtain the computer-control surface inventory failed because
+  its trusted Node process exited unexpectedly. No browser or assistive
+  technology review was performed in this attempt. The manual review remains
+  unresolved, and Task 32 remains active.
+- A subsequent computer-control inventory attempt failed the same way. A
+  headless system Chrome screenshot of the unauthenticated sign-in page at
+  1280 × 800 showed the form within the viewport; this isolated visual check
+  does not cover the authenticated journey, zoom, contrast, or screen-reader
+  behavior and does not satisfy the manual review gate.

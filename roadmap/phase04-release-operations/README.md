@@ -124,12 +124,28 @@ commit remains scoped to one task with failing behavioral tests first.
 | [10 — Complete release and onboarding documentation](task10-complete-release-runbook.md) | Documentation | 3 | Setup, schema administration, deployment, recovery, and user onboarding are documented |
 | [11 — Verify, rollback, and promote the release](task11-verify-and-promote-release.md) | Integration | 5 | The production-like artifact passes verification, rollback, and promotion |
 
-Total: 100 points, including the 30-point repository review follow-up and the
-26-point local review follow-up.
+### Interface Readability Follow-up
+
+After Task 32, resume Task 07 as already directed. Complete the following
+frontend tasks after Task 07 and before production-like deployment in Task 08.
+Recheck affected Task 32 visual and accessibility evidence after the changes.
+Theme and icon work are evaluations with explicit decisions, not assumptions
+that a toggle or icons must ship.
+
+| Task | Area | Points | Outcome |
+| --- | --- | ---: | --- |
+| [33 — Improve Feedback Readability](task33-improve-feedback-readability.md) | Frontend | 3 | Make feedback legible and actionable across the product. |
+| [34 — Evaluate Light and Dark Themes](task34-evaluate-light-dark-themes.md) | Frontend | 5 | Evaluate and, if warranted, deliver an accessible theme choice. |
+| [35 — Experiment with Icons](task35-experiment-with-icons.md) | Frontend | 2 | Evaluate a limited, reversible icon treatment. |
+
+Total: 110 points, including the 30-point repository review follow-up, the
+26-point local review follow-up, and the 10-point interface follow-up.
 
 
 ## Exit Criteria
 
+- Tasks 33–35 pass their acceptance criteria, and affected browser, contrast,
+  keyboard, and assistive-technology review evidence is refreshed.
 - Tasks 22–32 pass their acceptance criteria. A PostgreSQL database migrated by
   Flyway passes compatibility checks, representative drift still fails, browser
   failures remain safely diagnosable, and the completed browser/manual review
