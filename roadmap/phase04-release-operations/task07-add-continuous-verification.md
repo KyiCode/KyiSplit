@@ -2,7 +2,7 @@
 
 - Story points: 5
 - Area: Operations
-- Status: Planned
+- Status: In progress
 - Dependencies: Tasks 04, 06, and review follow-up Tasks 12–32
 
 ## Goal
@@ -38,3 +38,18 @@ workflow verification. Task 21 completion alone does not complete this task.
 - Run the workflow on a branch and record a successful clean run.
 - Introduce a temporary failing check and confirm artifact publication is
   skipped, then remove the temporary change.
+
+## Implementation Record - 2026-11-19
+
+- Extended `.github/workflows/verify.yml` to create a stopped, isolated
+  PostgreSQL 16 data-directory template, apply and validate Flyway V1 against
+  its dedicated database, install Chromium, and run the safe packaged browser
+  journey before building and publishing the release artifact.
+- Backend tests passed (287 tests); frontend tests passed (93 tests); frontend
+  lint and build passed. Prettier parsed and accepted the workflow after its
+  final step-context adjustment.
+- A previous remote run succeeded on the prior workflow and another prior
+  backend-test failure skipped the artifact steps. The modified workflow has
+  not had a remote run, and a deliberate failing-check run has not been done.
+  The local checkout has no E2E PostgreSQL template or initdb binaries, so the
+  isolated browser suite could not be run locally. Task 07 remains in progress.
