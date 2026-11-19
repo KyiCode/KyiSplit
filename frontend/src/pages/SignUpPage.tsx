@@ -6,6 +6,7 @@ import PasswordInput from "../components/PasswordInput"
 import { signUp } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
 import { MAX_SIGNUP_PASSWORD_BYTES } from "../../../backend/src/contracts/api"
+import ThemeControl from "../components/ThemeControl"
 
 function SignUpPage() {
     const navigate = useNavigate()
@@ -42,6 +43,7 @@ function SignUpPage() {
         <main className="minimal-auth-shell">
             <div className="minimal-auth-top">
                 <Brand />
+                <ThemeControl />
             </div>
             <form className="minimal-auth-card" onSubmit={handleSubmit}>
                 <header>

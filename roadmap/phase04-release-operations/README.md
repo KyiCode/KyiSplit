@@ -102,7 +102,7 @@ Selecting a database profile must not disable production runtime safeguards.
 | [29 — Clarify Balance Refresh and Safer Delete Focus](task29-clarify-balance-refresh-and-delete-focus.md) (done) | Frontend | 2 | Make retained balances visibly stale during refresh and make keyboard deletion deliberate. |
 | [30 — Order Expense Activity Deterministically](task30-order-expense-activity.md) (done) | Backend | 1 | Make Recent expenses consistently show newest activity first. |
 | [31 — Return a Validation Error for Malformed JSON](task31-reject-malformed-json.md) (done) | Backend | 1 | Treat invalid request JSON as a client error rather than an internal server failure. |
-| [32 — Rerun the Private Release Browser Review](task32-rerun-private-release-browser-review.md) | Integration | 3 | Close the review's browser, visual, and accessibility evidence gaps before resuming release operations. |
+| [32 — Rerun the Private Release Browser Review](task32-rerun-private-release-browser-review.md) (done) | Integration | 3 | Close the review's browser, visual, and accessibility evidence gaps before resuming release operations. |
 
 The order prioritizes trustworthy verification, confirmed-save recovery,
 expense transparency, then the browser review. Each implementation change and

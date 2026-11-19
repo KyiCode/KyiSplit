@@ -4,6 +4,7 @@ import BalancePanel from "../components/BalancePanel"
 import ExpenseBox from "../components/ExpenseBox"
 import Modal from "../components/Modal"
 import PageShell from "../components/PageShell"
+import Icon from "../components/Icon"
 import RepaymentPanel from "../components/RepaymentPanel"
 import { fetchBalance } from "../api/balances"
 import { deleteExpense, fetchExpenseDetail, fetchExpenses } from "../api/expenses"
@@ -271,10 +272,11 @@ function GroupPage() {
                 </div>
                 <div className="group-actions">
                     <button className="button secondary" onClick={handleInvite} disabled={inviteLoading}>
+                        <Icon name="people" />
                         {inviteLoading ? "Creating…" : "Invite people"}
                     </button>
                     <button className="button primary" onClick={() => navigate(`/group/${groupId}/addexpense`)}>
-                        <span>＋</span> Add expense
+                        <Icon name="plus" /> Add expense
                     </button>
                 </div>
             </section>

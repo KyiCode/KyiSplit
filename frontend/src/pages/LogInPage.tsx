@@ -5,6 +5,7 @@ import UsernameInput from "../components/UsernameInput"
 import PasswordInput from "../components/PasswordInput"
 import { logIn } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
+import ThemeControl from "../components/ThemeControl"
 
 function LogInPage() {
     const navigate = useNavigate()
@@ -44,6 +45,7 @@ function LogInPage() {
         <main className="minimal-auth-shell">
             <div className="minimal-auth-top">
                 <Brand />
+                <ThemeControl />
             </div>
             <form className="minimal-auth-card" onSubmit={handleSubmit}>
                 <header>

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type { CurrencyType } from "../interfaces/interface"
 import CurrencyPicker from "./CurrencyPicker"
+import Icon from "./Icon"
 import Modal from "./Modal"
 
 function AddGroup({ onAddGroup }: {
@@ -96,7 +97,7 @@ function AddGroup({ onAddGroup }: {
                 </div>
             ) : (
                 <button className="create-group-prompt" onClick={() => setAddingGroup(true)}>
-                    <span className="create-icon">+</span>
+                    <Icon name="plus" />
                     <span>
                         <strong>Start a new group</strong>
                         <small>Trip, home, dinner—anything shared.</small>

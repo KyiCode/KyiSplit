@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { logOut } from "../api/auth"
 import { apiErrorMessage } from "../api/client"
 import Brand from "./Brand"
+import ThemeControl from "./ThemeControl"
 
 function PageShell({ children, action }: { children: ReactNode, action?: ReactNode }) {
     const location = useLocation()
@@ -50,6 +51,7 @@ function PageShell({ children, action }: { children: ReactNode, action?: ReactNo
                 <Brand />
                 <div className="topbar-actions">
                     {action}
+                    <ThemeControl />
                     <button
                         className="button ghost compact"
                         disabled={loggingOut}

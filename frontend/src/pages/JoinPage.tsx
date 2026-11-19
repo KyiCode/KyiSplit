@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import Brand from "../components/Brand"
+import ThemeControl from "../components/ThemeControl"
 import { joinGroup } from "../api/groups"
 import { verifySession } from "../api/auth"
 import { ApiError } from "../api/client"
@@ -88,7 +89,7 @@ function JoinPage() {
 
     return (
         <main className="join-shell">
-            <Brand />
+            <div className="join-topbar"><Brand /><ThemeControl /></div>
             <section className="join-card">
                 <span className="eyebrow">You’re invited</span>
                 <h1>Come split the tab.</h1>
